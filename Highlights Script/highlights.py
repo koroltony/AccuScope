@@ -1,49 +1,51 @@
 import cv2
 import os
-import time
 import numpy as np
+import matplotlib.pyplot as plt
 
-start_time = time.time()
+#Read in Grey Frame
+greyFrame = cv2.imread('frame73.jpg', cv2.IMREAD_GRAYSCALE)
 
-def highlights(video):
-    totalFrames = video.get(cv2.CAP_PROP_FRAME_COUNT)
-    fps = video.get(cv2.CAP_PROP_FPS)
-    width = round(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = round(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    if not video.isOpened():
-        print("Video could not be opened")
+#Threshold values above 1 in a Greyscale Space of [0-255] to black. Values == 1 are white.
+threshholdValue, mask = cv2.threshold(greyFrame, 1, 255, cv2.THRESH_BINARY_INV)
 
-    while video.isOpened(): 
-        currentFrame = video.get(cv2.CAP_PROP_POS_FRAMES)
-        #print(round(currentFrame*100/totalFrames, 2),"% Done After", round(time.time() - start_time, 2), " Seconds")
-        #frameRead is whether the frame was successfully read
-        frameRead, frame = video.read()
-        
-        #Break if Frame was Read Unsuccessfully
-        if not frameRead:
-            break
-        
-        #Convert to Grey Scale
-        greyScale = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+#Save Dimensions of the 4K Image
+height, width = greyFrame.shape[:2]
 
-        #Resize from 4K into 1080p (My Monitor Only Supports 1080p)
-        displayFrame = cv2.resize(greyScale, (960, 540))
+#Radius of Circular Mask
+radius = 1100
 
-        #Show the Individual Frame
-        cv2.imshow('Surgery Video', displayFrame)
+#Middle Coordinate of a 4K Synergy Image
+middleCord = np.array([width//2, height//2])
 
-        #print("frame: ", currentFrame, " time: ", round(currentFrame/fps, 2))
+#Declare a mask with same dimensions as 4K image
+mask = np.zeros((height, width), np.uint8)
 
-        #Press q to break
-        if cv2.waitKey(25) & 0xFF == ord('q'): # Press 'q' to exit
-            break
-    
-    video.release()
-    #Close all open windows
-    cv2.destroyAllWindows()
+#Used MATLAB Image Viewer Toolbox to find the coordinates of the the top left and bottom right
+#of the minimap. The format is ex: (662, 63) or (width, height)
+miniMapTopLeftCord = np.array([35, 63])
+miniMapBottomRightCord = np.array([662, 414])
 
-#Main Function with Test
-if __name__=="__main__":
-    video = cv2.VideoCapture('HDR shimmer coracoid.mp4')
-    highlights(video)
-    print("--- %s seconds ---" % (time.time() - start_time))
+#Draw a circle on the image. On the mask, go to the middle coordinate, extend out a radius. Draw white
+# (White=255) on the black mask. (White indicates the parts of the mask that will be let through)
+cv2.circle(mask, middleCord, radius, 255, -1)
+
+#Draw a rectangle on the image. On the Mask, go to the topleft and bottom right of the minimap
+#The rectangle defined in this area will be white upon the black (zeros) mask.
+cv2.rectangle(mask, miniMapTopLeftCord, miniMapBottomRightCord, 255, -1)
+
+#Apply the mask using a bitwise and of the frame on itself with the mask we just defined.
+masked_greyFrame = cv2.bitwise_and(greyFrame, greyFrame, mask=mask)
+
+# Calculate the histogram with and without the mask
+hist_full = cv2.calcHist([greyFrame], [0], None, [256], [1, 256])
+hist_mask = cv2.calcHist([greyFrame], [0], mask, [256], [1, 256])
+
+# Display images and histograms
+plt.subplot(221), plt.imshow(greyFrame, 'gray'), plt.title('Original Image')
+plt.subplot(222), plt.imshow(mask, 'gray'), plt.title('Circular Mask')
+plt.subplot(223), plt.imshow(masked_greyFrame, 'gray'), plt.title('Masked Image')
+plt.subplot(224), plt.plot(hist_full), plt.plot(hist_mask)
+plt.xlim([0, 256])
+
+plt.show()
