@@ -38,14 +38,23 @@ cv2.rectangle(mask, miniMapTopLeftCord, miniMapBottomRightCord, 255, -1)
 masked_greyFrame = cv2.bitwise_and(greyFrame, greyFrame, mask=mask)
 
 # Calculate the histogram with and without the mask
-hist_full = cv2.calcHist([greyFrame], [0], None, [256], [1, 256])
+#hist_full = cv2.calcHist([greyFrame], [0], None, [256], [1, 256])
 hist_mask = cv2.calcHist([greyFrame], [0], mask, [256], [1, 256])
 
-# Display images and histograms
-plt.subplot(221), plt.imshow(greyFrame, 'gray'), plt.title('Original Image')
-plt.subplot(222), plt.imshow(mask, 'gray'), plt.title('Circular Mask')
-plt.subplot(223), plt.imshow(masked_greyFrame, 'gray'), plt.title('Masked Image')
-plt.subplot(224), plt.plot(hist_full), plt.plot(hist_mask)
-plt.xlim([0, 256])
+mean = np.mean(hist_mask)
+std_dev = np.std(hist_mask)
+z_scores = (hist_mask - mean) / std_dev
 
-plt.show()
+outlierThreshold = 4
+outlier_bins = np.where(np.abs(z_scores) > outlierThreshold)[0]
+numOutliers = outlier_bins.size
+outliersExist = numOutliers > 0
+
+# Display images and histograms
+#plt.subplot(221), plt.imshow(greyFrame, 'gray'), plt.title('Original Image')
+#plt.subplot(222), plt.imshow(mask, 'gray'), plt.title('Circular Mask')
+#plt.subplot(223), plt.imshow(masked_greyFrame, 'gray'), plt.title('Masked Image')
+#plt.subplot(224), plt.plot(hist_full), plt.plot(hist_mask)
+#plt.xlim([0, 256])
+
+#plt.show()
