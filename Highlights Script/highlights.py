@@ -13,8 +13,6 @@ def highlights(video):
     height = round(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
     #Radius of Circular Mask
     radius = 1100
-    #Declare a mask with same dimensions as 4K image
-    mask = np.zeros((height, width), np.uint8)
     #Middle Coordinate of a 4K Synergy Image
     middleCord = np.array([width//2, height//2])
 
@@ -22,6 +20,18 @@ def highlights(video):
     #of the minimap. The format is ex: (662, 63) or (width, height)
     miniMapTopLeftCord = np.array([35, 63])
     miniMapBottomRightCord = np.array([662, 414])
+
+    #Declare a mask with same dimensions as 4K image
+    mask = np.zeros((height, width), np.uint8)
+
+    #Draw a circle on the image. On the mask, go to the middle coordinate, extend out a radius. Draw white
+    #(White=255) on the black mask. (White indicates the parts of the mask that will be let through)
+    cv2.circle(mask, middleCord, radius, 255, -1)
+
+    #Draw a rectangle on the image. On the Mask, go to the topleft and bottom right of the minimap
+    #The rectangle defined in this area will be white upon the black (zeros) mask.
+    cv2.rectangle(mask, miniMapTopLeftCord, miniMapBottomRightCord, 255, -1)
+
     if not video.isOpened():
         print("Video could not be opened")
     
@@ -35,17 +45,9 @@ def highlights(video):
         greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         #Resize from 4K into 1080p (My Monitor Only Supports 1080p)
-        #displayFrame = cv2.resize(greyFrame, (960, 540))
+        displayFrame = cv2.resize(greyFrame, (960, 540))
         #Show the Individual Frame
-        #cv2.imshow('Surgery Video', displayFrame)
-
-        #Draw a circle on the image. On the mask, go to the middle coordinate, extend out a radius. Draw white
-        # (White=255) on the black mask. (White indicates the parts of the mask that will be let through)
-        cv2.circle(mask, middleCord, radius, 255, -1)
-
-        #Draw a rectangle on the image. On the Mask, go to the topleft and bottom right of the minimap
-        #The rectangle defined in this area will be white upon the black (zeros) mask.
-        cv2.rectangle(mask, miniMapTopLeftCord, miniMapBottomRightCord, 255, -1)
+        cv2.imshow('Surgery Video', displayFrame)
 
         #Apply the mask using a bitwise and of the frame on itself with the mask we just defined.
         masked_greyFrame = cv2.bitwise_and(greyFrame, greyFrame, mask=mask)
