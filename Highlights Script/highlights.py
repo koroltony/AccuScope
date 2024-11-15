@@ -44,7 +44,7 @@ def highlights(video):
         currentFrame = video.get(cv2.CAP_PROP_POS_FRAMES)
         greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        #Resize from 4K into 1080p (My Monitor Only Supports 1080p)
+        #Resize from 4K into 1080p (My Monitor Only Supports 1080p).
         displayFrame = cv2.resize(greyFrame, (960, 540))
         #Show the Individual Frame
         cv2.imshow('Surgery Video', displayFrame)
