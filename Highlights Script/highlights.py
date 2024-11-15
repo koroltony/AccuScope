@@ -61,7 +61,7 @@ def highlights(video):
         std_dev = np.std(hist_mask)
         z_scores = (hist_mask - mean) / std_dev
 
-        #Sensitivity seems to be around 3-4
+        #Sensitivity seems to be around 3-4.
         outlierThreshold = 3
 
         outlier_bins = np.where(np.abs(z_scores) > outlierThreshold)[0]
