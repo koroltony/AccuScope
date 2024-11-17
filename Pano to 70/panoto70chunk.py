@@ -33,6 +33,8 @@ def capture_frames(video, chunk_size=40):
         else:
             if frame_count > 0:
                 frames[i:] = frames[frame_count - 1]
+            else:
+                return np.array([])
             break
 
     return frames
@@ -40,8 +42,6 @@ def capture_frames(video, chunk_size=40):
 
 def pano70(video, chunk_size=40):
     fps = video.get(cv2.CAP_PROP_FPS)
-    num_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
-    frame_offset = 0
 
     if not video.isOpened():
         print("Video could not be opened")
@@ -70,9 +70,12 @@ def pano70(video, chunk_size=40):
 
     # ----------------------------------------------------------------------
 
-    while video.isOpened() and frame_offset <= num_frames:
+    while video.isOpened():
         # Capture a chunk of frames
         frames = capture_frames(video, chunk_size)
+
+        if frames.size == 0:
+            break
 
         # Iterate over each frame in the chunk
         for i,frame in enumerate(frames):
@@ -129,13 +132,11 @@ def pano70(video, chunk_size=40):
         if cv2.waitKey(25) & 0xFF == ord('q'):
             break
 
-        frame_offset += chunk_size
-
     video.release()
     cv2.destroyAllWindows()
 
 #Main Function with Test
 if __name__=="__main__":
     video = cv2.VideoCapture('Pano to 70 glitch.mp4')
-    pano70(video)
+    pano70(video,60)
     print("--- %s seconds ---" % (time.time() - start_time))
