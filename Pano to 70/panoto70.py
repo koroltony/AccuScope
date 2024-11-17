@@ -111,7 +111,7 @@ def pano70(video):
         soutliersExist = (snumOutliers > 0)
 
         if (soutliersExist and np.all(soutlier_bins < 2)) or (loutliersExist and np.all(loutlier_bins < 2)):
-            timeStamp = currentFrame/fps
+            timeStamp = video.get(cv2.CAP_PROP_POS_FRAMES)/ fps
             print('Pano to 70 at ', round(timeStamp, 2), 'seconds')
         #print("frame: ", currentFrame, " time: ", round(currentFrame/fps, 2))
             #Show the Individual Frame and its histogram
