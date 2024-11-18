@@ -2,8 +2,20 @@ import cv2
 import os
 import numpy as np
 import time
-from auto_mask import create_mask
 from matplotlib import pyplot as plt
+import subprocess
+import sys
+# Get the root of the repository so that we can access all repo files
+repo_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel']).strip().decode()
+
+# find helper scripts in our repository to get auto_mask
+helper_scripts_dir = os.path.join(repo_root, 'Helper Scripts')
+
+# Append the path to sys.path so Python can find auto_mask
+sys.path.append(helper_scripts_dir)
+
+# Now you can import auto_mask
+from auto_mask import create_mask
 
 start_time = time.time()
 
