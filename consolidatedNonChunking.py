@@ -38,17 +38,7 @@ while video.isOpened():
         print('Highlight Shimmer at ', round(timeStamp, 2), 'seconds')
 
     #Check Frozen Frames
-    current_time = time.time()
-    frozen_frame_flags = []  
-    start_time = time.time()
-    if current_time - start_time >= time_interval:
-        start_time = current_time
-        if detect_frozen_frame(prev_frame, frame):
-            frozen_frame_flags.append(1)  # Append 1 when frozen frame is detected
-            print("Frozen frame detected! ", round((currentFrame/fps), 4), 'seconds')
-        else: 
-            frozen_frame_flags.append(0)  # Append 0 when frozen frame is detected
-        prev_frame = frame
+    
         
 
     #Resize from 4K into 1080p (My Monitor Only Supports 1080p)
