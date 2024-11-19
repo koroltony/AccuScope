@@ -4,6 +4,7 @@ import numpy as np
 import time
 import matplotlib.pyplot as plt
 from greenScripts.greenScreen import checkGreenFrame
+from Highlights.highlights import checkHighlightsFrame
 
 start_time = time.time()
 
