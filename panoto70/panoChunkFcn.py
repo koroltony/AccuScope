@@ -141,7 +141,7 @@ def chunkPano(chunk,smask,lmask):
 #Main Function with Test
 if __name__=="__main__":
     #OpenCV Declaration
-    video = cv2.VideoCapture("Pano to 70 glitch.mp4")
+    video = cv2.VideoCapture("C:/Users/korol/Documents/Capstone TK/Pano to 70 glitch.mp4")
     totalFrames = video.get(cv2.CAP_PROP_FRAME_COUNT)
     fps = video.get(cv2.CAP_PROP_FPS)
 
@@ -150,6 +150,8 @@ if __name__=="__main__":
     # first, read the starting frame:
 
     frame_read, frame = video.read()
+
+    frame = cv2.resize(frame,(1920,1080))
 
     # Next, create masks for the main image and minimap: (lmask is main, smask is minimap)
 
