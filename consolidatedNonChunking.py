@@ -64,4 +64,20 @@ while video.isOpened():
     if cv2.waitKey(25) & 0xFF == ord('q'): # Press 'q' to exit
         break
 
+    # Parameters
+window_size = 10
+
+# Sliding window sum
+window_sums = [sum(frozen_frame_flags[i:i+window_size]) for i in range(len(frozen_frame_flags) - window_size + 1)]
+
+# Plotting with window sum (window sum for visualizing concentration otherwise we would see a bunch of 1's in a row)
+plt.figure(figsize=(10, 5))
+plt.plot(window_sums, label='Window Sums')
+#plt.axhline(y=np.mean(window_sums), color='r', linestyle='--', label='Mean')
+plt.xlabel('Index')
+plt.ylabel('Sum of Ones')
+plt.title('Concentration of Detections')
+plt.legend()
+plt.show()
+
 print("--- %s seconds ---" % (time.time() - codeStart))
