@@ -10,7 +10,7 @@ import sys
 repo_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel']).strip().decode()
 
 # find helper scripts in our repository to get auto_mask
-helper_scripts_dir = os.path.join(repo_root, 'Helper Scripts')
+helper_scripts_dir = os.path.join(repo_root, 'HelperScripts')
 
 # Append the path to sys.path so Python can find auto_mask
 sys.path.append(helper_scripts_dir)
@@ -59,11 +59,7 @@ def pano70(video):
         if not frameRead:
             break
 
-        currentFrame = video.get(cv2.CAP_PROP_POS_FRAMES)
         greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-        #Resize from 4K into 1080p (My Monitor Only Supports 1080p)
-        displayFrame = cv2.resize(greyFrame, (960, 540))
 
         #Apply the mask using a bitwise and of the frame on itself with the mask we just defined.
         #lmasked_greyFrame = cv2.bitwise_and(greyFrame, greyFrame, mask=lmask)

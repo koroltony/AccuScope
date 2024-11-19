@@ -9,7 +9,7 @@ import subprocess
 repo_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel']).strip().decode()
 
 # find helper scripts in our repository to get auto_mask
-helper_scripts_dir = os.path.join(repo_root, 'Helper Scripts')
+helper_scripts_dir = os.path.join(repo_root, 'HelperScripts')
 
 # Append the path to sys.path so Python can find auto_mask
 sys.path.append(helper_scripts_dir)
