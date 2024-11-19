@@ -3,6 +3,8 @@ import os
 import numpy as np
 import time
 import matplotlib.pyplot as plt
+import subprocess
+import sys
 from greenScripts.greenScreen import checkGreenFrame
 from Highlights.highlights import checkHighlightsFrame
 
@@ -18,15 +20,21 @@ if not video.isOpened():
 
 while video.isOpened(): 
     currentFrame = video.get(cv2.CAP_PROP_POS_FRAMES)
+    timeStamp = currentFrame/fps
     frameRead, frame = video.read()
     if not frameRead:
         break
     
+    #Check Green
     greenState = checkGreenFrame(frame)
     if(greenState == 1):
-        print('Non Minimap Green Screen Error Found at: ', round((currentFrame/fps), 4), 'seconds')
+        print('Non Minimap Green Screen Error Found at: ', round(timeStamp, 4), 'seconds')
     elif(greenState == 2):
-        print('Minimap Green Screen Error Found at: ', round((currentFrame/fps), 4), 'seconds')
+        print('Minimap Green Screen Error Found at: ', round(timeStamp, 4), 'seconds')
+
+    #Check Highlights
+    if checkHighlightsFrame:
+        print('Highlight Shimmer at ', round(timeStamp, 2), 'seconds')
 
     #Resize from 4K into 1080p (My Monitor Only Supports 1080p)
     displayFrame = cv2.resize(frame, (960, 540))
