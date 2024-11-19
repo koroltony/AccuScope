@@ -14,7 +14,7 @@ def detect_frozen_frame(frame1, frame2, threshold=1):
 
 def main():
 
-    cap = cv2.VideoCapture('green flash lag 3.mp4')
+    cap = cv2.VideoCapture('C:/Users/zionc/Documents/Arthrex/green flash lag.mp4')
     currentFrame = 1
     fps = cap.get(cv2.CAP_PROP_FPS)  
     time_interval = 1/fps  # Time interval in seconds

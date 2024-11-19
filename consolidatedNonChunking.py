@@ -9,12 +9,12 @@ from greenScripts.greenScreen import checkGreenFrame
 from Highlights.highlights import checkHighlightsFrame
 from Frozen.lagff15 import detect_frozen_frame
 
-start_time = time.time()
-
 #OpenCV Declaration
 video = cv2.VideoCapture("C:/Users/zionc/Documents/Arthrex/green flash and lag.mp4")
 totalFrames = video.get(cv2.CAP_PROP_FRAME_COUNT)
 fps = video.get(cv2.CAP_PROP_FPS)
+time_interval = 1/fps
+codeStart = time.time()
 
 if not video.isOpened():
     print("Video could not be opened")
@@ -38,7 +38,18 @@ while video.isOpened():
         print('Highlight Shimmer at ', round(timeStamp, 2), 'seconds')
 
     #Check Frozen Frames
-
+    current_time = time.time()
+    frozen_frame_flags = []  
+    start_time = time.time()
+    if current_time - start_time >= time_interval:
+        start_time = current_time
+        if detect_frozen_frame(prev_frame, frame):
+            frozen_frame_flags.append(1)  # Append 1 when frozen frame is detected
+            print("Frozen frame detected! ", round((currentFrame/fps), 4), 'seconds')
+        else: 
+            frozen_frame_flags.append(0)  # Append 0 when frozen frame is detected
+        prev_frame = frame
+        
 
     #Resize from 4K into 1080p (My Monitor Only Supports 1080p)
     displayFrame = cv2.resize(frame, (960, 540))
@@ -50,4 +61,22 @@ while video.isOpened():
     if cv2.waitKey(25) & 0xFF == ord('q'): # Press 'q' to exit
         break
 
-print("--- %s seconds ---" % (time.time() - start_time))
+
+# Parameters
+window_size = 10
+
+# Sliding window sum
+window_sums = [sum(frozen_frame_flags[i:i+window_size]) for i in range(len(frozen_frame_flags) - window_size + 1)]
+
+# Plotting with window sum
+plt.figure(figsize=(10, 5))
+plt.plot(window_sums, label='Window Sums')
+#plt.axhline(y=np.mean(window_sums), color='r', linestyle='--', label='Mean')
+plt.xlabel('Index')
+plt.ylabel('Sum of Ones')
+plt.title('Concentration of Ones in Binary Array')
+plt.legend()
+plt.show()
+
+
+print("--- %s seconds ---" % (time.time() - codeStart))

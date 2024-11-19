@@ -2,5 +2,7 @@ XPS 9305
 Power Mode: High Efficiency
 11/18/2024 21:01PM
 consolidatedNonChunking.py
-green                   60.81 seconds
-green and highlights    61.18 seconds
+Video: green flash and lag.mp4
+green                                   60.81 seconds
+green and highlights                    61.18 seconds
+green and highlights and frozen frames  65.23 seconds
