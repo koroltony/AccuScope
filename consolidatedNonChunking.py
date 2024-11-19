@@ -10,11 +10,14 @@ from Highlights.highlights import checkHighlightsFrame
 from Frozen.lagff15 import detect_frozen_frame
 
 #OpenCV Declaration
-video = cv2.VideoCapture("C:/Users/zionc/Documents/Arthrex/green flash and lag.mp4")
+video = cv2.VideoCapture("C:/Users/16262/Desktop/arthrex/green flash and lag 3.mp4")
 totalFrames = video.get(cv2.CAP_PROP_FRAME_COUNT)
 fps = video.get(cv2.CAP_PROP_FPS)
 time_interval = 1/fps
 codeStart = time.time()
+
+frameRead, prev_frame = video.read()
+frozen_frame_flags = []
 
 if not video.isOpened():
     print("Video could not be opened")
@@ -34,15 +37,15 @@ while video.isOpened():
         print('Minimap Green Screen Error Found at: ', round(timeStamp, 4), 'seconds')
 
     #Check Highlights
-    if checkHighlightsFrame:
-        print('Highlight Shimmer at ', round(timeStamp, 2), 'seconds')
+    #if checkHighlightsFrame:
+        #print('Highlight Shimmer at ', round(timeStamp, 2), 'seconds')
 
     #Check Frozen Frames
     current_time = time.time()
-    frozen_frame_flags = []  
+      
     start_time = time.time()
-    if current_time - start_time >= time_interval:
-        start_time = current_time
+    if current_time - codeStart >= time_interval:
+        codeStart = current_time
         if detect_frozen_frame(prev_frame, frame):
             frozen_frame_flags.append(1)  # Append 1 when frozen frame is detected
             print("Frozen frame detected! ", round((currentFrame/fps), 4), 'seconds')
