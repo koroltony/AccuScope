@@ -5,6 +5,27 @@ import numpy as np
 
 start_time = time.time()
 
+def checkGreenFrame(frame):
+    BRthreshold = 50
+    Gthreshold = 100
+    miniMapTopLeft = np.array([63, 35])
+    miniMapBottomRight = np.array([416, 664])
+    miniMapMiddleCord = np.add(miniMapTopLeft, np.subtract(miniMapBottomRight, miniMapTopLeft)//2)
+    height, width = frame.shape[:2]
+    Bframemiddle = frame[height//2, width//2, 0]
+    Gframemiddle = frame[height//2, width//2, 1]
+    Rframemiddle = frame[height//2, width//2, 2]
+    Bminimapmiddle = frame[miniMapMiddleCord[1], miniMapMiddleCord[0], 0]
+    Gminimapmiddle = frame[miniMapMiddleCord[1], miniMapMiddleCord[0], 1]
+    Rminimapmiddle = frame[miniMapMiddleCord[1], miniMapMiddleCord[0], 2]
+
+    if(Bframemiddle < BRthreshold) and (Gframemiddle > Gthreshold) and (Rframemiddle < BRthreshold):
+        return 1
+        #print('Non Minimap Green Screen Error Found at: ', round((currentFrame/fps), 4), 'seconds')
+    elif(Bminimapmiddle < BRthreshold) and (Gminimapmiddle > Gthreshold) and (Rminimapmiddle < BRthreshold):
+        return 2
+        #print('Minimap Green Screen Error Found at: ', round((currentFrame/fps), 4), 'seconds')
+
 def checkGreen(video):
     totalFrames = video.get(cv2.CAP_PROP_FRAME_COUNT)
     fps = video.get(cv2.CAP_PROP_FPS)
@@ -60,6 +81,7 @@ def checkGreen(video):
 
 #Main Function with Test
 if __name__=="__main__":
-    video = cv2.VideoCapture('green flash and lag.mp4')
-    checkGreen(video)
+    frame = cv2.imread('C:/Users/zionc/Documents/GitHub/ece188a-arthrex/Green Screen Scripts/frame831.jpg')
+    cv2.imshow('Image', frame)
+    checkGreenFrame(frame)
     print("--- %s seconds ---" % (time.time() - start_time))
