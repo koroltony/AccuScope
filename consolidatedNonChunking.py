@@ -7,6 +7,7 @@ import subprocess
 import sys
 from greenScripts.greenScreen import checkGreenFrame
 from Highlights.highlights import checkHighlightsFrame
+from Frozen.lagff15 import detect_frozen_frame
 
 start_time = time.time()
 
@@ -35,6 +36,9 @@ while video.isOpened():
     #Check Highlights
     if checkHighlightsFrame:
         print('Highlight Shimmer at ', round(timeStamp, 2), 'seconds')
+
+    #Check Frozen Frames
+
 
     #Resize from 4K into 1080p (My Monitor Only Supports 1080p)
     displayFrame = cv2.resize(frame, (960, 540))
