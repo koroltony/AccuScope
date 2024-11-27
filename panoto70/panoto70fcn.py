@@ -4,6 +4,8 @@ import numpy as np
 
 import subprocess
 import sys
+from HelperScripts.auto_mask import create_mask
+
 # Get the root of the repository so that we can access all repo files
 repo_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel']).strip().decode()
 
@@ -12,9 +14,6 @@ helper_scripts_dir = os.path.join(repo_root, 'Helper Scripts')
 
 # Append the path to sys.path so Python can find auto_mask
 sys.path.append(helper_scripts_dir)
-
-# Now you can import auto_mask
-from auto_mask import create_mask
 
 def checkPano(frame,smask,lmask):
 

@@ -7,3 +7,13 @@ nothing                                 60.66 seconds       60.82 seconds
 green                                   60.81 seconds       60.78 seconds    
 green and highlights                    61.18 seconds       61.15 seconds
 green and highlights and frozen frames  84.42 seconds       80.86 seconds
+
+XPS 9305
+Power Mode: High Performance
+11/26/2024 21:31PM
+consolidatedNonChunking.py
+Video: Pano to 70 glitch.mp4                Showing Video       No Video
+nothing                                     35.81 seconds       30.51 seconds
+green & highlights                          29.80 seconds       26.87 seconds          
+green & highlights & pano                   39.40 seconds       39.01 seconds
+green & highlights & frozen frames & pano   41.48 seconds       39.33 seconds
