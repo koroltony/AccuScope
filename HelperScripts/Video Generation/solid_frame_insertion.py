@@ -45,7 +45,7 @@ out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
 # Create a color frame (0-255)
 
-color = [0,255,0]
+color = [0,0,0]
 
 color_frame = np.zeros((height, width, 3), dtype=np.uint8)
 

@@ -2,17 +2,6 @@ import cv2
 import numpy as np
 import time
 
-# TODO:
-
-'''
-1) See about isolating the minimap and circular part since that's all we care about
-2) See if Zion's implementation is any better than mine and evaluate what's next
-3) Look into overlap to make sure we have full frame coverage at edges of chunks
-4) look into chunk size and why it might be useful to control
-5) Figure out if chunking is even necessary at all (maybe not in this case, but maybe for lag and stuff)
-6) Doing chunks means we can't compare with a previous chunk. See if can do that efficiently
-'''
-
 start_time = time.time()
 
 def capture_frames(video,chunk_size=40):

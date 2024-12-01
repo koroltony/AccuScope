@@ -52,17 +52,20 @@ def capture_frames(video, chunk_size=40):
     return frames
 
 
-def chunkGreen(chunk, smask, lmask):
+def chunkBlack(chunk, smask, lmask):
 
     # Apply masks with logical conditions
-    green_condition = (chunk[:, :, :, 1] > 90) & (chunk[:, :, :, 0] < 10) & (chunk[:, :, :, 2] < 10)
+    Black_condition = (chunk[:, :, :, 1] > 20) | (chunk[:, :, :, 0] > 20) | (chunk[:, :, :, 2] > 20)
 
-    green_mask_l = green_condition & lmask[None, :, :]
-    green_mask_s = green_condition & smask[None, :, :]
+    # check for non-black pixels (since this is easier than checking if all are black)
+
+    Black_mask_l = Black_condition & lmask[None, :, :]
+    Black_mask_s = Black_condition & smask[None, :, :]
 
     # Find indices of flagged frames
-    flagged_inds_l = np.where(np.any(green_mask_l, axis=(1, 2)))[0]
-    flagged_inds_s = np.where(np.any(green_mask_s, axis=(1, 2)))[0]
+
+    flagged_inds_l = np.where(~np.any(Black_mask_l, axis=(1, 2)))[0]
+    flagged_inds_s = np.where(~np.any(Black_mask_s, axis=(1, 2)))[0]
 
     # Calculate offsets for main video and minimap
     Offsetsl = np.array([], dtype=int)
@@ -81,6 +84,7 @@ def chunkGreen(chunk, smask, lmask):
 if __name__ == "__main__":
     # OpenCV Declaration
     video = cv2.VideoCapture("C:/Users/korol/Documents/Capstone TK/Pano to 70 glitch.mp4")
+    #video = cv2.VideoCapture("C:/Users/korol/Documents/Capstone TK/green flash and lag.mp4")
     totalFrames = video.get(cv2.CAP_PROP_FRAME_COUNT)
     fps = video.get(cv2.CAP_PROP_FPS)
 
@@ -117,7 +121,7 @@ if __name__ == "__main__":
         currentFrame = video.get(cv2.CAP_PROP_POS_FRAMES)
 
         # Get offsets for main video and minimap
-        Offsetsl, Offsetss = chunkGreen(chunk, smask, lmask)
+        Offsetsl, Offsetss = chunkBlack(chunk, smask, lmask)
 
         # Calculate timestamps
         if Offsetsl.size > 0:
