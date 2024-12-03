@@ -52,20 +52,14 @@ def capture_frames(video, chunk_size=40):
     return frames
 
 
-def chunkVectorSearch(chunk, smask, lmask):
+def chunkVectorSearch(chunk):
 
     # Green Logical Mask:
     green_condition = (chunk[:, :, :, 1] > 90) & (chunk[:, :, :, 0] < 10) & (chunk[:, :, :, 2] < 10)
 
-    green_mask_l = green_condition & lmask[None, :, :]
-    green_mask_s = green_condition & smask[None, :, :]
-
     # Magenta Logical Mask:
 
     Magenta_condition = (chunk[:, :, :, 2] > 120) & (chunk[:, :, :, 1] < 50) & (chunk[:, :, :, 0] > 120)
-
-    Magenta_mask_l = Magenta_condition & lmask[None, :, :]
-    Magenta_mask_s = Magenta_condition & smask[None, :, :]
 
     # Dropout Logical Mask:
 
@@ -73,22 +67,20 @@ def chunkVectorSearch(chunk, smask, lmask):
 
     # Now that we have the masks for each error type, we simply need to search the arrays for these errors
 
-    gflagged_inds_l = np.where(np.any(green_mask_l, axis=(1, 2)))[0]
-    gflagged_inds_s = np.where(np.any(green_mask_s, axis=(1, 2)))[0]
+    gflagged_inds_l = np.where(np.all(green_condition, axis=(1, 2)))[0]
+    gflagged_inds_s = np.where(np.any(green_condition, axis=(1, 2)))[0]
 
-    mflagged_inds_l = np.where(np.any(Magenta_mask_l, axis=(1, 2)))[0]
-    mflagged_inds_s = np.where(np.any(Magenta_mask_s, axis=(1, 2)))[0]
+    mflagged_inds = np.where(np.any(Magenta_condition, axis=(1, 2)))[0]
 
     bflagged_inds = np.where(~np.any(Black_condition, axis=(1, 2)))[0]
 
     # Calculate offsets for main video and minimap for all error types
 
     gOffsetsl = np.array([], dtype=int)
-    mOffsetsl = np.array([], dtype=int)
+    mOffsets = np.array([], dtype=int)
     bOffsets = np.array([], dtype=int)
 
     gOffsetss = np.array([], dtype=int)
-    mOffsetss = np.array([], dtype=int)
 
     # update list of indices for each error type and return
 
@@ -102,11 +94,8 @@ def chunkVectorSearch(chunk, smask, lmask):
 
     # magenta list update:
 
-    if mflagged_inds_l.size > 0:
-        mOffsetsl = mflagged_inds_l - chunk.shape[0] + 1
-
-    if mflagged_inds_s.size > 0:
-        mOffsetss = mflagged_inds_s - chunk.shape[0] + 1
+    if mflagged_inds.size > 0:
+        mOffsets = mflagged_inds - chunk.shape[0] + 1
 
     # dropout list update:
 
@@ -115,7 +104,7 @@ def chunkVectorSearch(chunk, smask, lmask):
 
     # return green indices first, then magenta then dropout
 
-    return gOffsetsl, gOffsetss, mOffsetsl, mOffsetss, bOffsets
+    return gOffsetsl, gOffsetss, mOffsets, bOffsets
 
 # Main Function with Test
 if __name__ == "__main__":
@@ -124,29 +113,13 @@ if __name__ == "__main__":
     totalFrames = video.get(cv2.CAP_PROP_FRAME_COUNT)
     fps = video.get(cv2.CAP_PROP_FPS)
 
-    # ---------- Create Mask From First Video Frame -----------------------
-
-    # First, read the starting frame
-    frame_read, frame = video.read()
-
-    frame = cv2.resize(frame,(1920,1080))
-
-    # Next, create masks for the main image and minimap: (lmask is main, smask is minimap)
-    lmask, smask = create_mask(frame)
-
-    # Reset the video frame grabber to start at frame 0
-    video.set(cv2.CAP_PROP_POS_FRAMES, 0)
-
-    # ----------------------------------------------------------------------
-
     if not video.isOpened():
         print("Video could not be opened")
 
     gmain_timestamps = []
     gminimap_timestamps = []
 
-    mmain_timestamps = []
-    mminimap_timestamps = []
+    m_timestamps = []
 
     b_timestamps = []
 
@@ -162,7 +135,7 @@ if __name__ == "__main__":
         currentFrame = video.get(cv2.CAP_PROP_POS_FRAMES)
 
         # Get offsets for main video and minimap
-        gOffsetsl, gOffsetss, mOffsetsl, mOffsetss, bOffsets = chunkVectorSearch(chunk, smask, lmask)
+        gOffsetsl, gOffsetss, mOffsets, bOffsets = chunkVectorSearch(chunk)
 
         # Calculate timestamps
         if gOffsetsl.size > 0:
@@ -173,13 +146,9 @@ if __name__ == "__main__":
             timeStampss = (currentFrame + gOffsetss) / fps
             gminimap_timestamps.extend(timeStampss)
 
-        if mOffsetsl.size > 0:
-            timeStampsl = (currentFrame + mOffsetsl) / fps
-            mmain_timestamps.extend(timeStampsl)
-
-        if mOffsetss.size > 0:
-            timeStampss = (currentFrame + mOffsetss) / fps
-            mminimap_timestamps.extend(timeStampss)
+        if mOffsets.size > 0:
+            timeStampsl = (currentFrame + mOffsets) / fps
+            m_timestamps.extend(timeStampsl)
 
         if bOffsets.size > 0:
             timeStamps = (currentFrame + bOffsets) / fps
@@ -190,8 +159,7 @@ if __name__ == "__main__":
     print("Green Main video errors (seconds):", [round(t, 4) for t in gmain_timestamps])
     print("Green Minimap errors (seconds):", [round(t, 4) for t in gminimap_timestamps])
 
-    print("Magenta Main video errors (seconds):", [round(t, 4) for t in mmain_timestamps])
-    print("Magenta Minimap errors (seconds):", [round(t, 4) for t in mminimap_timestamps])
+    print("Magenta video errors (seconds):", [round(t, 4) for t in m_timestamps])
 
     print("Dropout video errors (seconds):", [round(t, 4) for t in b_timestamps])
 
