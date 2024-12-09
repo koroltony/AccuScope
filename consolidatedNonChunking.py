@@ -23,21 +23,11 @@ tempTime = time.time()
 frameRead, prev_frame = video.read()
 frozen_frame_flags = []
 
-# ---------- Create Mask From First Video Frame -----------------------
-
-# first, read the starting frame:
-
-frame_read, frame = video.read()
-
-# Next, create masks for the main image and minimap: (lmask is main, smask is minimap)
-
-lmask,smask = create_mask(frame)
-
-# Reset the video frame grabber to start at frame 0
-
+# Create Masks
+_, initial_frame = video.read()
+lmask, smask = create_mask(initial_frame)
 video.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
-# ---------------------------------------------------------------------
 
 if not video.isOpened():
     print("Video could not be opened")
