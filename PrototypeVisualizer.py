@@ -96,7 +96,7 @@ while video.isOpened():
     # Create the error frames to be shown side by side with video
     if error_counter > 0:
         error_display = error_frame.copy()
-        cv2.putText(error_display, error_text, (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        cv2.putText(error_display, error_text, (1200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
         error_counter -= 1
     else:
         error_display = black_frame.copy()
