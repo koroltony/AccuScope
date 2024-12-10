@@ -10,7 +10,31 @@ def detect_frozen_frame(frame1, frame2, threshold=1):
     diff = cv2.absdiff(frame1, frame2)
     gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
     diff_pixels = np.count_nonzero(gray_diff > threshold)
-    return diff_pixels < frame1.shape[0] * frame1.shape[1] * 0.001 # returns yes if the number of diff pixels is less than the number of frame pixels * x where x = 0.001 or 0.1%
+    return diff_pixels < frame1.shape[0] * frame1.shape[1] * 0.01 # returns yes if the number of diff pixels is less than the number of frame pixels * x where x = 0.01 or 1%
+
+# Function to identify frozen frame intervals and convert to seconds
+def detect_frozen_intervals(window_sums, window_threshold, window_size, fps):
+    intervals = []
+    in_interval = False
+    start = None
+
+    for i, sum_value in enumerate(window_sums):
+        if sum_value >= window_threshold:
+            if not in_interval:
+                start = i
+                in_interval = True
+        else:
+            if in_interval:
+                end = i + window_size - 1 
+                intervals.append((round((start / fps), 4), round((end / fps), 4)))
+                in_interval = False
+
+    # Check if the last interval goes till the end
+    if in_interval:
+        end = len(window_sums) + window_size - 1
+        intervals.append((round((start / fps), 4), round((end / fps), 4)))
+
+    return intervals
 
 def main():
 
@@ -59,7 +83,7 @@ def main():
     """
 
     # Parameters
-    window_size = 10
+    window_size = 5
 
     # Sliding window sum
     window_sums = [sum(frozen_frame_flags[i:i+window_size]) for i in range(len(frozen_frame_flags) - window_size + 1)]
@@ -68,19 +92,21 @@ def main():
     plt.figure(figsize=(10, 5))
     plt.plot(window_sums, label='Window Sums')
     #plt.axhline(y=np.mean(window_sums), color='r', linestyle='--', label='Mean')
-    plt.xlabel('Index')
-    plt.ylabel('Sum of Ones')
-    plt.title('Concentration of Ones in Binary Array')
+    plt.xlabel('Frame Index')
+    plt.ylabel('Sums')
+    plt.title(f'Concentration of Frozen Frame Detections with Window Size = {window_size}')
     plt.legend()
     plt.show()
 
-    """
-    plt.xlabel('Frame')
-    plt.ylabel('Frozen Frame Detection')
-    plt.title('Frozen Frame Detection Over Time')
-    plt.ylim([0, 1.5])
-    plt.show()
-    """
+    window_threshold = window_size * 0.5  # Define a threshold for detection
+
+    # Detect intervals
+    frozen_intervals = detect_frozen_intervals(window_sums, window_threshold, window_size, fps)
+
+    # Print intervals in seconds
+    for start, end in frozen_intervals:
+        #print(f"Frozen frame from {start:.2f} seconds (frame {round(start*fps)}) to {end:.2f} seconds (frame {round(end*fps)})")
+        print(f"Frozen frame from {start:.2f} seconds to {end:.2f} seconds")
 
 if __name__ == "__main__":
     main()
