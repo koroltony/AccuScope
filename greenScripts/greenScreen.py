@@ -10,7 +10,7 @@ def checkGreenFrame(frame):
     Gthreshold = 100
     miniMapTopLeft = np.array([63, 35])
     miniMapBottomRight = np.array([416, 664])
-    miniMapMiddleCord = np.add(miniMapTopLeft, np.subtract(miniMapBottomRight, miniMapTopLeft)//2)
+    miniMapMiddleCord = (np.add(miniMapTopLeft, np.subtract(miniMapBottomRight, miniMapTopLeft)//2))
     height, width = frame.shape[:2]
     Bframemiddle = frame[height//2, width//2, 0]
     Gframemiddle = frame[height//2, width//2, 1]
@@ -39,16 +39,16 @@ def checkGreen(video):
     if not video.isOpened():
         print("Video could not be opened")
 
-    while video.isOpened(): 
+    while video.isOpened():
         currentFrame = video.get(cv2.CAP_PROP_POS_FRAMES)
         #print(round(currentFrame*100/totalFrames, 2),"% Done After", round(time.time() - start_time, 2), " Seconds")
         #frameRead is whether the frame was successfully read
         frameRead, frame = video.read()
-        
+
         #Break if Frame was Read Unsuccessfully
         if not frameRead:
             break
-        
+
         #Resize from 4K into 1080p (My Monitor Only Supports 1080p)
         #displayFrame = cv2.resize(frame, (960, 540))
 
@@ -74,7 +74,7 @@ def checkGreen(video):
         #Press q to break
         if cv2.waitKey(25) & 0xFF == ord('q'): # Press 'q' to exit
             break
-    
+
     video.release()
     #Close all open windows
     cv2.destroyAllWindows()

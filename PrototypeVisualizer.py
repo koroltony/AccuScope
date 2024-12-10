@@ -2,7 +2,9 @@ import cv2
 import numpy as np
 import time
 import matplotlib.pyplot as plt
-from greenScripts.greenScreen import checkGreenFrame
+from greenScripts.greenVectorizedSolution import checkGreenFrame
+from greenScripts.magentaScreen import checkMagentaFrame
+from greenScripts.dropoutScreen import checkBlackFrame
 from Highlights.highlights import checkHighlightsFrame
 from Frozen.lagff15 import detect_frozen_frame
 from HelperScripts.auto_mask import create_mask
@@ -11,7 +13,7 @@ from panoto70.panoto70fcn import checkPano
 codeStart = time.time()
 frozen_frame_flags = []
 
-video = cv2.VideoCapture("panoto70/Pano to 70 glitch.mp4")
+video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/stitched_test_video.mp4")
 if not video.isOpened():
     print("Video could not be opened")
     exit()
@@ -20,7 +22,7 @@ fps = int(video.get(cv2.CAP_PROP_FPS))
 frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
 frame_size = (frame_width, frame_height)
-output_size = (frame_width * 2, frame_height)
+output_size = (frame_width * 2+12, frame_height+8)
 
 # Create an output stream to hold the prototype video
 out = cv2.VideoWriter('result_video.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, output_size)
@@ -60,6 +62,22 @@ while video.isOpened():
         print(f"Minimap Green Screen Error at {time_stamp:.2f}s")
         error_counter = error_duration
 
+    magenta_state = checkMagentaFrame(frame)
+    if magenta_state == 1:
+        # Create error text and error frame variables to display later
+        error_text = f"Magenta Screen Error at {time_stamp:.2f}s"
+        print(f"Magenta Screen Error at {time_stamp:.2f}s")
+        error_frame = frame.copy()
+        error_counter = error_duration
+
+    black_state = checkBlackFrame(frame)
+    if black_state == 1:
+        # Create error text and error frame variables to display later
+        error_text = f"Dropout Error at {time_stamp:.2f}s"
+        print(f"Dropout Error at {time_stamp:.2f}s")
+        error_frame = frame.copy()
+        error_counter = error_duration
+
     if checkHighlightsFrame(frame):
         error_text = f"Highlight Shimmer at {time_stamp:.2f}s"
         print(f"Highlight Shimmer at {time_stamp:.2f}s")
@@ -76,35 +94,63 @@ while video.isOpened():
     else:
         frozen_frame_flags.append(0)
 
-    pano_state = checkPano(frame, smask, lmask)
-    if pano_state == 1:
-        error_text = f"Non Minimap Pano-70 Error at {time_stamp:.2f}s"
-        print(f"Non Minimap Pano-70 Error at {time_stamp:.2f}s")
-        error_frame = frame.copy()
-        error_counter = error_duration
-    elif pano_state == 2:
-        error_text = f"Minimap Pano-70 Error at {time_stamp:.2f}s"
-        print(f"Minimap Pano-70 Error at {time_stamp:.2f}s")
-        error_frame = frame.copy()
-        error_counter = error_duration
-    elif pano_state == 3:
-        error_text = f"Minimap and Main Screen Pano-70 Error at {time_stamp:.2f}s"
-        print(f"Minimap and Main Screen Pano-70 Error at {time_stamp:.2f}s")
-        error_frame = frame.copy()
-        error_counter = error_duration
+    # only check pano if we did not already detect a dropout (cause pano flags dropout)
+    if black_state != 1:
+        pano_state = checkPano(frame, smask, lmask)
+        if pano_state == 1:
+            error_text = f"Non Minimap Pano-70 Error at {time_stamp:.2f}s"
+            print(f"Non Minimap Pano-70 Error at {time_stamp:.2f}s")
+            error_frame = frame.copy()
+            error_counter = error_duration
+        elif pano_state == 2:
+            error_text = f"Minimap Pano-70 Error at {time_stamp:.2f}s"
+            print(f"Minimap Pano-70 Error at {time_stamp:.2f}s")
+            error_frame = frame.copy()
+            error_counter = error_duration
+        elif pano_state == 3:
+            error_text = f"Minimap and Main Screen Pano-70 Error at {time_stamp:.2f}s"
+            print(f"Minimap and Main Screen Pano-70 Error at {time_stamp:.2f}s")
+            error_frame = frame.copy()
+            error_counter = error_duration
 
     # Create the error frames to be shown side by side with video
     if error_counter > 0:
         error_display = error_frame.copy()
         cv2.putText(error_display, error_text, (1200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        cv2.putText(error_display, 'Error Stream', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
         error_counter -= 1
     else:
         error_display = black_frame.copy()
         error_text = "No Error"
-        cv2.putText(error_display, error_text, (600, 600), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+        cv2.putText(error_display, error_text, (900, 600), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+        cv2.putText(error_display, 'Error Stream', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
 
     # Put the frames next to each other
-    combined_frame = np.hstack((frame, error_display))
+    cv2.putText(frame, 'Input Video', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+
+    # Create borders for frames:
+
+    frame_disp = cv2.copyMakeBorder(
+                 frame,
+                 2,
+                 6,
+                 3,
+                 3,
+                 cv2.BORDER_CONSTANT,
+                 value=(225,225,225)
+              )
+
+    error_display_disp = cv2.copyMakeBorder(
+                 error_display,
+                 2,
+                 6,
+                 3,
+                 3,
+                 cv2.BORDER_CONSTANT,
+                 value=(225,225,225)
+              )
+
+    combined_frame = np.hstack((frame_disp, error_display_disp))
 
     # Write to Output Video
     out.write(combined_frame)

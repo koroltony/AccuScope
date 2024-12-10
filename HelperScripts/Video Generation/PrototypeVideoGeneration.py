@@ -67,7 +67,7 @@ video_files = [
     "C:/Users/korol/Documents/Capstone TK/green flash and lag.mp4",
     "C:/Users/korol/Documents/Capstone TK/HDR shimmer coracoid.mp4"
 ]
-output_path = "C:/Users/korol/Documents/Capstone TK/stitched_test_video.mp4"
+output_path = "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/stitched_test_video.mp4"
 
 # Specify the absolute frame indices where magenta lines should appear
 magenta_frame_indices = [30, 150, 300, 450, 600]
