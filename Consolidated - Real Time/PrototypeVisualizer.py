@@ -20,7 +20,7 @@ codeStart = time.time()
 frozen_frame_flags = []
 
 # Initialize video stream
-video = cv2.VideoCapture(0)  # Use 0 for the default webcam
+video = cv2.VideoCapture(0)
 
 if not video.isOpened():
     print("Camera could not be opened")
@@ -134,11 +134,11 @@ while True:
             error_frame = frame.copy()
             error_counter = error_duration
 
-    # Calculate dynamic positions based on frame dimensions
+    # Calculate where to put the text
     frame_height, frame_width = frame.shape[:2]
-    top_left = (int(0.02 * frame_width), int(0.05 * frame_height))  # Top-left corner for labels
-    center_pos = (int(0.4 * frame_width), int(0.5 * frame_height))  # Center for 'No Error'
-    error_pos = (int(0.02 * frame_width), int(0.15 * frame_height))  # Beneath 'Error Stream'
+    top_left = (int(0.02 * frame_width), int(0.05 * frame_height))
+    center_pos = (int(0.4 * frame_width), int(0.5 * frame_height))
+    error_pos = (int(0.02 * frame_width), int(0.15 * frame_height))
 
     # Create the error frames to be shown side by side with video
     if error_counter > 0:
@@ -177,7 +177,7 @@ actual_duration = end_time - start_time  # Total duration in seconds
 actual_fps = int(frame_count / actual_duration)
 print(f"Original FPS: {fps}, Calculated FPS: {actual_fps:.2f}")
 
-# Re-encode video with actual FPS
+# Rewrite video with actual FPS
 print("Rewriting video to get correct FPS after processing")
 cap = cv2.VideoCapture(input_video_path)
 out_corrected = cv2.VideoWriter(output_video_path, cv2.VideoWriter_fourcc(*'mp4v'), actual_fps, output_size)
