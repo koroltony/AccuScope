@@ -1,7 +1,7 @@
 import cv2
 import os
 import numpy as np
-
+import matplotlib.pyplot as plt
 import subprocess
 import sys
 
@@ -29,7 +29,7 @@ def checkPano(frame,lmask):
     # Calculate the histogram with and without the mask
     #hist_full = cv2.calcHist([grayFrame], [0], None, [256], [1, 256])
 
-    # Calculate separate histograms for the main image:
+    # Calculate separate histograms for the minimap and the main image:
 
     lhist_mask = cv2.calcHist([grayFrame], [0], lmask, [256], [1, 256])
 
@@ -50,14 +50,12 @@ def checkPano(frame,lmask):
     #print(f'zscore: {lz_scores}')
 
     #Sensitivity seems to be around 5
-    outlierThreshold = 3
+    outlierThreshold = 5
 
     loutlier_bins = np.where(np.abs(lz_scores) > outlierThreshold)[0]
     lnumOutliers = loutlier_bins.size
 
     loutliersExist = (lnumOutliers > 0)
-
-    # if there is an error in just the main image:
 
     if (loutliersExist and np.all(loutlier_bins < 2)):
 
@@ -77,11 +75,11 @@ def checkPanoEdge(frame, lmask):
     # Detect edges using Canny edge filter
     # Thresholds are intentionally high to make only strong edges appear
 
-    edges = cv2.Canny(maskedFrame, threshold1=200, threshold2=300)
+    edges = cv2.Canny(maskedFrame, threshold1=100, threshold2=200)
 
     # Shrink the mask inward by a few pixels because the edge of the mask gets in the way
     kernel = np.ones((3, 3), np.uint8)
-    shrunk_mask = cv2.erode(lmask, kernel, iterations=10)
+    shrunk_mask = cv2.erode(lmask, kernel, iterations=5)
 
     edges = cv2.bitwise_and(edges, edges, mask=shrunk_mask)
 
@@ -89,7 +87,7 @@ def checkPanoEdge(frame, lmask):
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
     # Filter contours: keep only edges longer than threshold
-    min_edge_length = 400
+    min_edge_length = 100
 
     longEdges = []
 
@@ -99,6 +97,7 @@ def checkPanoEdge(frame, lmask):
 
     # If there are more than 3 edges, it is probably a pano to 70 glitch
     return len(longEdges)>3
+
 
 #Main Function with Test
 if __name__=="__main__":

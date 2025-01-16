@@ -46,12 +46,6 @@ plt.imshow(initial_frame)
 
 video.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
-plt.figure()
-plt.imshow(lmask)
-
-plt.figure()
-plt.imshow(smask)
-
 # Create variables for the error visualization
 prev_frame = None
 black_frame = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
@@ -65,6 +59,27 @@ print('Press "q" to exit recording')
 
 frame_count = 0
 start_time = time.time()
+
+# ------------------------------------------------
+# Define the folder to save videos
+output_folder = "rawVideos"
+os.makedirs(output_folder, exist_ok=True)  # Create the folder if it doesn't exist
+
+# Get a list of all existing files in the folder
+existing_files = os.listdir(output_folder)
+
+# Find the highest existing video indexq
+video_indices = [
+    int(f.split("savedVideo")[1].split(".")[0]) for f in existing_files if f.startswith("savedVideo") and f.endswith(".mp4")
+]
+next_index = max(video_indices, default=0) + 1
+
+# Define the output video path with the new name
+output_video_path = os.path.join(output_folder, f"savedVideo{next_index}.mp4")
+
+saved_vid = cv2.VideoWriter(output_video_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, [frame_width,frame_height])
+
+# -------------------------------------------------
 
 while True:
 
@@ -149,6 +164,8 @@ while True:
         cv2.putText(error_display, 'No Error', center_pos, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
 
     # Label the input frame
+    saved_vid.write(frame)
+
     cv2.putText(frame, 'Input Video', top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
 
     # Combine the frames side by side
@@ -167,6 +184,7 @@ while True:
 video.release()
 out.release()
 cv2.destroyAllWindows()
+saved_vid.release()
 
 # Calculate actual FPS
 end_time = time.time()

@@ -1,6 +1,7 @@
 import cv2
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 import subprocess
 import sys
 
@@ -74,11 +75,11 @@ def checkPanoEdge(frame, lmask):
     # Detect edges using Canny edge filter
     # Thresholds are intentionally high to make only strong edges appear
 
-    edges = cv2.Canny(maskedFrame, threshold1=200, threshold2=300)
+    edges = cv2.Canny(maskedFrame, threshold1=100, threshold2=200)
 
     # Shrink the mask inward by a few pixels because the edge of the mask gets in the way
     kernel = np.ones((3, 3), np.uint8)
-    shrunk_mask = cv2.erode(lmask, kernel, iterations=10)
+    shrunk_mask = cv2.erode(lmask, kernel, iterations=5)
 
     edges = cv2.bitwise_and(edges, edges, mask=shrunk_mask)
 
@@ -86,7 +87,7 @@ def checkPanoEdge(frame, lmask):
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
     # Filter contours: keep only edges longer than threshold
-    min_edge_length = 400
+    min_edge_length = 100
 
     longEdges = []
 

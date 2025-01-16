@@ -15,7 +15,7 @@ from source.panoto70fcn import checkPanoEdge
 # Get video path:
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-video_path = os.path.join(current_dir, "source", "Pano to 70 glitch.mp4")
+video_path = os.path.join(current_dir, "source", "savedVideo7.mp4")
 
 
 codeStart = time.time()
@@ -39,6 +39,8 @@ out = cv2.VideoWriter('result_video.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, 
 _, initial_frame = video.read()
 lmask, smask = create_mask(initial_frame)
 video.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
+plt.imshow(lmask)
 
 # Create variables for the error visualization
 prev_frame = None

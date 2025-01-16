@@ -10,7 +10,7 @@ def detect_frozen_frame(frame1, frame2, threshold=1):
     diff = cv2.absdiff(frame1, frame2)
     gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
     diff_pixels = np.count_nonzero(gray_diff > threshold)
-    return diff_pixels < frame1.shape[0] * frame1.shape[1] * 0.01 # returns yes if the number of diff pixels is less than the number of frame pixels * x where x = 0.01 or 1%
+    return diff_pixels < frame1.shape[0] * frame1.shape[1] * 0.001 # returns yes if the number of diff pixels is less than the number of frame pixels * x where x = 0.01 or 1%
 
 # Function to identify frozen frame intervals and convert to seconds
 def detect_frozen_intervals(window_sums, window_threshold, window_size, fps):
@@ -25,7 +25,7 @@ def detect_frozen_intervals(window_sums, window_threshold, window_size, fps):
                 in_interval = True
         else:
             if in_interval:
-                end = i + window_size - 1 
+                end = i + window_size - 1
                 intervals.append((round((start / fps), 4), round((end / fps), 4)))
                 in_interval = False
 
@@ -40,11 +40,11 @@ def main():
 
     cap = cv2.VideoCapture('C:/Users/16262/Desktop/arthrex/green flash and lag 3.mp4')
     currentFrame = 1
-    fps = cap.get(cv2.CAP_PROP_FPS)  
+    fps = cap.get(cv2.CAP_PROP_FPS)
     time_interval = 1/fps  # Time interval in seconds
 
     ret, prev_frame = cap.read()
-    frozen_frame_flags = []  
+    frozen_frame_flags = []
 
     start_time = time.time()
     #resized_frame = cv2.resize(current_frame, (960, 540))
@@ -64,7 +64,7 @@ def main():
             if detect_frozen_frame(prev_frame, current_frame):
                 frozen_frame_flags.append(1)  # Append 1 when frozen frame is detected
                 print("Frozen frame detected! ", round((currentFrame/fps), 4), 'seconds')
-            else: 
+            else:
                 frozen_frame_flags.append(0)  # Append 0 when frozen frame is detected
             prev_frame = current_frame
 
