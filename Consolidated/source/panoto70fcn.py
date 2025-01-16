@@ -1,7 +1,6 @@
 import cv2
 import os
 import numpy as np
-
 import subprocess
 import sys
 
@@ -14,7 +13,7 @@ helper_scripts_dir = os.path.join(repo_root, 'Helper Scripts')
 # Append the path to sys.path so Python can find auto_mask
 sys.path.append(helper_scripts_dir)
 
-def checkPano(frame,smask,lmask):
+def checkPano(frame,lmask):
 
     resultFlag = 0
 
@@ -32,7 +31,6 @@ def checkPano(frame,smask,lmask):
     # Calculate separate histograms for the minimap and the main image:
 
     lhist_mask = cv2.calcHist([grayFrame], [0], lmask, [256], [1, 256])
-    shist_mask = cv2.calcHist([grayFrame], [0], smask, [256], [1, 256])
 
     #Calculate Statistics for Outliers in main video
 
@@ -58,53 +56,47 @@ def checkPano(frame,smask,lmask):
 
     loutliersExist = (lnumOutliers > 0)
 
-
-    #Calculate Statistics for Outliers in minimap
-
-    #print(f'frame: {frameRead}')
-    smean = np.mean(shist_mask)
-    #print(f'mean: {smean}')
-    sstd_dev = np.std(shist_mask)
-    #print(f'stand dev: {sstd_dev}')
-
-    if sstd_dev == 0:
-        sz_scores = [0]
-
-    else:
-        sz_scores = (shist_mask - smean) / sstd_dev
-
-    #print(f'zscore: {sz_scores}')
-
-    soutlier_bins = np.where(np.abs(sz_scores) > outlierThreshold)[0]
-    snumOutliers = soutlier_bins.size
-
-    soutliersExist = (snumOutliers > 0)
-
-    # if there is an error in both minimap and main footage:
-
-    if (soutliersExist and np.all(soutlier_bins < 2)) and (loutliersExist and np.all(loutlier_bins < 2)):
-
-        # return 3 if there is an error in both
-
-        resultFlag = 3
-
-    # if there is an error in just the main image:
-
     if (loutliersExist and np.all(loutlier_bins < 2)):
 
         # return 1 if there is an error in large
 
         resultFlag = 1
 
-    # if there is an error in just the minimap image:
-
-    if (soutliersExist and np.all(soutlier_bins < 2)):
-
-        # return 2 if there is an error in small
-
-        resultFlag = 2
-
     return resultFlag
+
+def checkPanoEdge(frame, lmask):
+    # Convert the frame to grayscale
+    grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # mask the frame
+    maskedFrame = cv2.bitwise_and(grayFrame, grayFrame, mask=lmask)
+
+    # Detect edges using Canny edge filter
+    # Thresholds are intentionally high to make only strong edges appear
+
+    edges = cv2.Canny(maskedFrame, threshold1=200, threshold2=300)
+
+    # Shrink the mask inward by a few pixels because the edge of the mask gets in the way
+    kernel = np.ones((3, 3), np.uint8)
+    shrunk_mask = cv2.erode(lmask, kernel, iterations=10)
+
+    edges = cv2.bitwise_and(edges, edges, mask=shrunk_mask)
+
+    # Find contours from the edges
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+    # Filter contours: keep only edges longer than threshold
+    min_edge_length = 400
+
+    longEdges = []
+
+    for contour in contours:
+        if cv2.arcLength(contour, closed=False) > min_edge_length:
+            longEdges.append(contour)
+
+    # If there are more than 3 edges, it is probably a pano to 70 glitch
+    return len(longEdges)>3
+
 
 #Main Function with Test
 if __name__=="__main__":

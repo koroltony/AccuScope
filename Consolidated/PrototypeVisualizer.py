@@ -10,12 +10,12 @@ from source.dropoutScreen import checkBlackFrame
 from source.highlights import checkHighlightsFrame
 from source.lagff15 import detect_frozen_frame
 from source.auto_mask import create_mask
-from source.panoto70fcn import checkPano
+from source.panoto70fcn import checkPanoEdge
 
 # Get video path:
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-video_path = os.path.join(current_dir, "source", "stitched_test_video.mp4")
+video_path = os.path.join(current_dir, "source", "Pano to 70 glitch.mp4")
 
 
 codeStart = time.time()
@@ -104,22 +104,13 @@ while video.isOpened():
 
     # only check pano if we did not already detect a dropout (because pano flags dropout)
     if black_state != 1:
-        pano_state = checkPano(frame, smask, lmask)
+        pano_state = checkPanoEdge(frame,lmask)
         if pano_state == 1:
-            error_text = f"Non Minimap Pano-70 Error at {time_stamp:.2f}s"
+            error_text = f"Pano-70 Error at {time_stamp:.2f}s"
             print(f"Non Minimap Pano-70 Error at {time_stamp:.2f}s")
             error_frame = frame.copy()
             error_counter = error_duration
-        elif pano_state == 2:
-            error_text = f"Minimap Pano-70 Error at {time_stamp:.2f}s"
-            print(f"Minimap Pano-70 Error at {time_stamp:.2f}s")
-            error_frame = frame.copy()
-            error_counter = error_duration
-        elif pano_state == 3:
-            error_text = f"Minimap and Main Screen Pano-70 Error at {time_stamp:.2f}s"
-            print(f"Minimap and Main Screen Pano-70 Error at {time_stamp:.2f}s")
-            error_frame = frame.copy()
-            error_counter = error_duration
+
 
     # Create the error frames to be shown side by side with video
     if error_counter > 0:
