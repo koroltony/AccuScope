@@ -83,6 +83,11 @@ def checkPanoEdge(frame, lmask):
 
     edges = cv2.bitwise_and(edges, edges, mask=shrunk_mask)
 
+    cv2.imshow('Edge',edges)
+
+    # Wait for a key press for 1ms and check if 'k' is pressed
+    cv2.waitKey(1) & 0xFF
+
     # Find contours from the edges
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
