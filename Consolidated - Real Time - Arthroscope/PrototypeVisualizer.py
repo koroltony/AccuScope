@@ -38,13 +38,24 @@ out = cv2.VideoWriter(input_video_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, ou
 
 # create mask for arthroscope footage based on first frame
 
-_, initial_frame = video.read()
-lmask, smask = create_mask(initial_frame)
+print('Press "k" to set mask for the footage')
 
-plt.figure()
-plt.imshow(initial_frame)
+while True:
+    _, initial_frame = video.read()
+    lmask, smask = create_mask(initial_frame)
+    cv2.imshow('Mask',lmask)
 
-video.set(cv2.CAP_PROP_POS_FRAMES, 0)
+    # Wait for a key press for 1ms and check if 'k' is pressed
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord('k'):
+        print("Mask Set")
+        break
+
+    if keyboard.is_pressed('k'):
+        print("Mask Set")
+        break
+
+cv2.destroyAllWindows()
 
 # Create variables for the error visualization
 prev_frame = None
@@ -113,7 +124,7 @@ while True:
         error_frame = frame.copy()
         error_counter = error_duration
 
-    black_state = checkBlackFrame(frame)
+    black_state = checkBlackFrame(frame,lmask)
     if black_state == 1:
         # Create error text and error frame variables to display later
         error_text = f"Dropout Error at {time_stamp:.2f}s"
@@ -228,17 +239,17 @@ print(f"Video rewritten with FPS: {actual_fps:.2f}. Saved as '{output_video_path
 
 print("--- %s seconds ---" % (time.time() - codeStart))
 
-window_size = 10
+# window_size = 10
 
-# Sliding window sum
-window_sums = [sum(frozen_frame_flags[i:i+window_size]) for i in range(len(frozen_frame_flags) - window_size + 1)]
+# # Sliding window sum
+# window_sums = [sum(frozen_frame_flags[i:i+window_size]) for i in range(len(frozen_frame_flags) - window_size + 1)]
 
-# Plotting with window sum (window sum for visualizing concentration otherwise we would see a bunch of 1's in a row)
-plt.figure(figsize=(10, 5))
-plt.plot(window_sums, label='Window Sums')
-#plt.axhline(y=np.mean(window_sums), color='r', linestyle='--', label='Mean')
-plt.xlabel('Index')
-plt.ylabel('Sum of Ones')
-plt.title('Concentration of Detections')
-plt.legend()
-plt.show()
+# # Plotting with window sum (window sum for visualizing concentration otherwise we would see a bunch of 1's in a row)
+# plt.figure(figsize=(10, 5))
+# plt.plot(window_sums, label='Window Sums')
+# #plt.axhline(y=np.mean(window_sums), color='r', linestyle='--', label='Mean')
+# plt.xlabel('Index')
+# plt.ylabel('Sum of Ones')
+# plt.title('Concentration of Detections')
+# plt.legend()
+# plt.show()
