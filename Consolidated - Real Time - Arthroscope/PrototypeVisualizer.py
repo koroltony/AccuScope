@@ -13,8 +13,7 @@ from source.lagff15 import detect_frozen_frame
 from source.auto_mask import create_mask
 from source.panoto70fcn import checkPanoEdge
 
-input_video_path = 'result_video.mp4'
-output_video_path = 'corrected_video.mp4'
+error_video_path = 'intermediate_video.mp4'
 
 codeStart = time.time()
 frozen_frame_flags = []
@@ -30,11 +29,10 @@ fps = int(video.get(cv2.CAP_PROP_FPS))
 print(fps)
 frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-#frame_size = (frame_width, frame_height)
 output_size = (2*frame_width, frame_height)
 
 # Create an output stream to hold the prototype video
-out = cv2.VideoWriter(input_video_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, output_size)
+out = cv2.VideoWriter(error_video_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, output_size)
 
 # create mask for arthroscope footage based on first frame
 
@@ -42,7 +40,7 @@ print('Press "k" to set mask for the footage')
 
 while True:
     _, initial_frame = video.read()
-    lmask, smask = create_mask(initial_frame)
+    lmask = create_mask(initial_frame)
     cv2.imshow('Mask',lmask)
 
     # Wait for a key press for 1ms and check if 'k' is pressed
@@ -62,7 +60,7 @@ prev_frame = None
 black_frame = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
 error_frame = black_frame.copy()
 error_text = "No Error"
-# This makes the error pop up on the screen for a full second (so you can actually see it)
+# This makes the error pop up on the screen for a good amount of time (so you can actually see it)
 error_duration = 2*fps
 error_counter = 0
 
@@ -71,22 +69,22 @@ print('Press "q" to exit recording')
 frame_count = 0
 start_time = time.time()
 
+# Raw Video Saving
 # ------------------------------------------------
-# Define the folder to save videos
-output_folder = "rawVideos"
-os.makedirs(output_folder, exist_ok=True)  # Create the folder if it doesn't exist
+output_folder = "Raw_Videos"
+os.makedirs(output_folder, exist_ok=True)
 
 # Get a list of all existing files in the folder
 existing_files = os.listdir(output_folder)
 
-# Find the highest existing video indexq
+# Find the highest existing video index
 video_indices = [
-    int(f.split("savedVideo")[1].split(".")[0]) for f in existing_files if f.startswith("savedVideo") and f.endswith(".mp4")
+    int(f.split("RawVideo")[1].split(".")[0]) for f in existing_files if f.startswith("RawVideo") and f.endswith(".mp4")
 ]
 next_index = max(video_indices, default=0) + 1
 
 # Define the output video path with the new name
-output_video_path = os.path.join(output_folder, f"savedVideo{next_index}.mp4")
+output_video_path = os.path.join(output_folder, f"RawVideo{next_index}.mp4")
 
 saved_vid = cv2.VideoWriter(output_video_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, [frame_width,frame_height])
 
@@ -205,10 +203,10 @@ print(f"Original FPS: {fps}, Calculated FPS: {actual_fps:.2f}")
 
 # Rewrite video with actual FPS
 print("Rewriting video to get correct FPS after processing")
-cap = cv2.VideoCapture(input_video_path)
+cap = cv2.VideoCapture(error_video_path)
 
 # Define the folder to save videos
-output_folder = "SavedVideos"
+output_folder = "Error_Videos"
 os.makedirs(output_folder, exist_ok=True)  # Create the folder if it doesn't exist
 
 # Get a list of all existing files in the folder

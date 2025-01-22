@@ -33,7 +33,6 @@ def create_mask(frame):
     # Declare an array for the mask image
 
     large_mask = np.zeros_like(gray, dtype=np.uint8)
-    small_mask = np.zeros_like(gray, dtype=np.uint8)
 
     # Create Threshold to only mask the circular regions (no numbers and letters):
 
@@ -60,13 +59,7 @@ def create_mask(frame):
             rr, cc = disk((center_y, center_x), radius, shape=large_mask.shape)
             large_mask[rr, cc] = 255
 
-        elif prop.area >= min_area and prop.area <=max_area:
-            # create a disk with the extracted properties and fill it with ones
-
-            rr, cc = disk((center_y, center_x), radius, shape=small_mask.shape)
-            small_mask[rr, cc] = 255
-
-    return(large_mask,small_mask)
+    return(large_mask)
 
 
 if __name__ == "__main__":
