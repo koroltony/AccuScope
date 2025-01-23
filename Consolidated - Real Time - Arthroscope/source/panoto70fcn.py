@@ -14,7 +14,7 @@ helper_scripts_dir = os.path.join(repo_root, 'Helper Scripts')
 # Append the path to sys.path so Python can find auto_mask
 sys.path.append(helper_scripts_dir)
 
-def checkPano(frame,lmask):
+def checkPano(frame,mask):
 
     resultFlag = 0
 
@@ -69,24 +69,21 @@ def checkPanoEdge(frame, lmask):
     # Convert the frame to grayscale
     grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    # mask the frame
-    maskedFrame = cv2.bitwise_and(grayFrame, grayFrame, mask=lmask)
-
     # Detect edges using Canny edge filter
     # Thresholds are intentionally high to make only strong edges appear
 
-    edges = cv2.Canny(maskedFrame, threshold1=100, threshold2=200)
+    edges = cv2.Canny(frame, threshold1=100, threshold2=200)
 
-    # Shrink the mask inward by a few pixels because the edge of the mask gets in the way
-    kernel = np.ones((3, 3), np.uint8)
-    shrunk_mask = cv2.erode(lmask, kernel, iterations=5)
+    # # Shrink the mask inward by a few pixels because the edge of the mask gets in the way
+    # kernel = np.ones((3, 3), np.uint8)
+    # shrunk_mask = cv2.erode(lmask, kernel, iterations=40)
 
-    edges = cv2.bitwise_and(edges, edges, mask=shrunk_mask)
+    edges = cv2.bitwise_and(edges, edges, mask=lmask)
 
-    cv2.imshow('Edge',edges)
+    # cv2.imshow('Edge',edges)
 
-    # Wait for a key press for 1ms and check if 'k' is pressed
-    cv2.waitKey(1) & 0xFF
+    # # Wait for a key press for 1ms and check if 'k' is pressed
+    # cv2.waitKey(1) & 0xFF
 
     # Find contours from the edges
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)

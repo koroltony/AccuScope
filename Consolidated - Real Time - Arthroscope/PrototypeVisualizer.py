@@ -41,7 +41,7 @@ print('Press "k" to set mask for the footage')
 while True:
     _, initial_frame = video.read()
     lmask = create_mask(initial_frame)
-    cv2.imshow('Mask',lmask)
+    cv2.imshow('Footage Mask',lmask)
 
     # Wait for a key press for 1ms and check if 'k' is pressed
     key = cv2.waitKey(1) & 0xFF
@@ -51,6 +51,60 @@ while True:
 
     if keyboard.is_pressed('k'):
         print("Mask Set")
+        break
+
+cv2.destroyAllWindows()
+
+# Create mask for pano to 70
+
+shrunk_mask = lmask
+keypress = False
+keypresg = False
+
+print("Shrink/grow mask until you don't see any edges")
+print('press "s" to shrink the mask')
+print('press "g" to grow mask')
+print('press "d" to begin processing')
+
+while True:
+
+    # Detect edges using Canny edge filter
+    # Thresholds are intentionally high to make only strong edges appear
+
+    edges = cv2.Canny(initial_frame, threshold1=100, threshold2=200)
+
+    # Shrink the mask inward by a few pixels because the edge of the mask gets in the way
+
+    kernel = np.ones((3, 3), np.uint8)
+
+    if keypress and not keyboard.is_pressed('s'):
+        print("Pano-to-70 Mask Shrunk")
+        shrunk_mask = cv2.erode(shrunk_mask, kernel, iterations=1)
+        keypress = False
+
+    elif keyboard.is_pressed('s') and not keypress:
+        keypress = True
+
+    if keypresg and not keyboard.is_pressed('g'):
+        print("Pano-to-70 Mask Grown")
+        shrunk_mask = cv2.dilate(shrunk_mask, kernel, iterations=1)
+        keypresg = False
+
+    elif keyboard.is_pressed('g') and not keypress:
+        keypresg = True
+
+    edges = cv2.bitwise_and(edges, edges, mask=shrunk_mask)
+
+    cv2.imshow('Pano-70 Mask',edges)
+
+    # Wait for a key press for 1ms and check if 'k' is pressed
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord('d'):
+        print("Pano-70 Mask Set")
+        break
+
+    if keyboard.is_pressed('d'):
+        print("Pano-70 Mask Set")
         break
 
 cv2.destroyAllWindows()
@@ -148,7 +202,7 @@ while True:
 
     # only check pano if we did not already detect a dropout (because pano flags dropout)
     if black_state != 1:
-        pano_state = checkPanoEdge(frame,lmask)
+        pano_state = checkPanoEdge(frame,shrunk_mask)
         if pano_state == 1:
             error_text = f"Pano-70 Error at {time_stamp:.2f}s"
             print(f"Pano-70 Error at {time_stamp:.2f}s")
