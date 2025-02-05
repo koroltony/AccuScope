@@ -39,11 +39,14 @@ def detect_frozen_intervals(window_sums, window_threshold, window_size, fps):
 
 def main():
 
-    prevFrame = cv2.imread("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/frame/frame5.jpg")
-    currentFrame = cv2.imread("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/frame/frame40.jpg")
+    frame_flagged = 135
 
-    if detect_frozen_frame(prevFrame, currentFrame):
-        print('Error Detected')
+    for i in range(frame_flagged - 2, frame_flagged + 2):
+        prevFrame = cv2.imread(f"C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Real_Time_Frames/frame{i}.jpg")
+        currentFrame = cv2.imread(f"C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Real_Time_Frames/frame{i+1}.jpg")
+
+        if detect_frozen_frame(prevFrame, currentFrame):
+            print(f'Error Detected between frames {i} and {i+1}')
 
 
     # cap = cv2.VideoCapture('C:/Users/16262/Desktop/arthrex/green flash and lag 3.mp4')
@@ -118,4 +121,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    print(time.time() - start_time) # total amount of time script takes
+    #print(time.time() - start_time) # total amount of time script takes

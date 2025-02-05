@@ -66,13 +66,16 @@ def checkPano(frame,mask):
     return resultFlag
 
 def checkPanoEdge(frame, lmask):
-    # Convert the frame to grayscale
-    grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Detect edges using Canny edge filter
     # Thresholds are intentionally high to make only strong edges appear
 
-    edges = cv2.Canny(frame, threshold1=100, threshold2=200)
+    # Thresholds are optimized for 1080p video
+
+    frame = cv2.resize(frame,[1920,1080])
+    lmask = cv2.resize(lmask,[1920,1080])
+
+    edges = cv2.Canny(frame, threshold1=400, threshold2=600)
 
     # # Shrink the mask inward by a few pixels because the edge of the mask gets in the way
     # kernel = np.ones((3, 3), np.uint8)
@@ -89,6 +92,7 @@ def checkPanoEdge(frame, lmask):
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
     # Filter contours: keep only edges longer than threshold
+
     min_edge_length = 100
 
     longEdges = []
@@ -97,15 +101,18 @@ def checkPanoEdge(frame, lmask):
         if cv2.arcLength(contour, closed=False) > min_edge_length:
             longEdges.append(contour)
 
-    # If there are more than 3 edges, it is probably a pano to 70 glitch
-    return len(longEdges)>3
+    # If there is more than 1 edge, it is probably a pano to 70 glitch
+    return len(longEdges)>1
 
 
 #Main Function with Test
 if __name__=="__main__":
+
+    w = 4000
+    h = 3000
     from auto_mask import create_mask
     #OpenCV Declaration
-    video = cv2.VideoCapture("Pano to 70 glitch.mp4")
+    video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/panoto70/Pano to 70 glitch.mp4")
     totalFrames = video.get(cv2.CAP_PROP_FRAME_COUNT)
     fps = video.get(cv2.CAP_PROP_FPS)
     time_interval = 1/fps
@@ -116,9 +123,12 @@ if __name__=="__main__":
 
     frame_read, frame = video.read()
 
+    frame = cv2.resize(frame,[w,h])
+
     # Next, create masks for the main image and minimap: (lmask is main, smask is minimap)
 
-    lmask,smask = create_mask(frame)
+    lmask = create_mask(frame)
+    plt.imshow(lmask)
 
     # Reset the video frame grabber to start at frame 0
 
@@ -131,16 +141,14 @@ if __name__=="__main__":
         currentFrame = video.get(cv2.CAP_PROP_POS_FRAMES)
         timeStamp = currentFrame/fps
         frameRead, frame = video.read()
+
         if not frameRead:
             break
 
          #Check Pano-70
+        frame = cv2.resize(frame,[w,h])
 
-        panoState = checkPano(frame,smask,lmask)
+        panoState = checkPanoEdge(frame,lmask)
 
         if(panoState == 1):
             print('Non Minimap Pano-70 Error Found at: ', round(timeStamp, 4), 'seconds')
-        elif(panoState == 2):
-            print('Minimap Pano-70 Error Found at: ', round(timeStamp, 4), 'seconds')
-        elif(panoState == 3):
-            print('Minimap and Main Screen Pano-70 Error Found at: ', round(timeStamp, 4), 'seconds')

@@ -166,8 +166,21 @@ start_time = time.time()
 
 # ---------------- Code for frame Grabbing (frozen frame debugging)-----
 currentFrame = 1
-path = 'C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/frame'
-# ----------------------------------------------------------------------
+# path = 'Real_Time_Frames'
+# for filename in os.listdir(path):
+#         file_path = os.path.join(path, filename)
+#         if os.path.isfile(file_path):
+#             try:
+#                 os.remove(file_path)
+#             except OSError as e:
+#                 print(f"Error deleting {file_path}: {e}")
+# time.sleep(5)
+# print("Frames Folder Cleared, Capturing New Footage")
+
+# ----------------------------------------------------------------------q
+
+window_size = 10
+frozen_frame_buffer = []
 
 while True:
 
@@ -175,68 +188,78 @@ while True:
     if not ret:
         break
 
-    filePathAndOutputName = os.path.join(path, f'frame{currentFrame}.jpg')
-    cv2.imwrite(filePathAndOutputName, frame)
+    # filePathAndOutputName = os.path.join(path, f'frame{currentFrame}.jpg')
+    # cv2.imwrite(filePathAndOutputName, frame)
 
     currentFrame += 1
     # print(frame_count)
     # print(f"Frame {frame_count} sum: {np.sum(frame)}")
     frame_count += 1
 
-    time_stamp = time.time() - codeStart
+    time_stamp = currentFrame/fps
 
     # Check Errors
     green_state = checkGreenFrame(frame)
     if green_state == 1:
         # Create error text and error frame variables to display later
-        error_text = f"Majority Green Screen Error at {time_stamp:.2f}s"
-        print(f"Majority Green Screen Error at {time_stamp:.2f}s")
+        error_text = f"Majority Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}"
+        print(f"Majority Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_frame = frame.copy()
         error_counter = error_duration
     elif green_state == 2:
-        error_text = f"Partial Green Screen Error at {time_stamp:.2f}s"
+        error_text = f"Partial Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}"
         error_frame = frame.copy()
-        print(f"Partial Green Screen Error at {time_stamp:.2f}s")
+        print(f"Partial Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_counter = error_duration
 
     magenta_state = checkMagentaFrame(frame)
     if magenta_state == 1:
         # Create error text and error frame variables to display later
-        error_text = f"Magenta Screen Error at {time_stamp:.2f}s"
-        print(f"Magenta Screen Error at {time_stamp:.2f}s")
+        error_text = f"Magenta Screen Error at {time_stamp:.2f}s and frame: {currentFrame}"
+        print(f"Magenta Screen Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_frame = frame.copy()
         error_counter = error_duration
 
     black_state = checkBlackFrame(frame,lmask)
     if black_state == 1:
         # Create error text and error frame variables to display later
-        error_text = f"Dropout Error at {time_stamp:.2f}s"
-        print(f"Dropout Error at {time_stamp:.2f}s")
+        error_text = f"Dropout Error at {time_stamp:.2f}s and frame: {currentFrame}"
+        print(f"Dropout Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_frame = frame.copy()
         error_counter = error_duration
 
-    # if checkHighlightsFrame(frame,lmask):
-    #     error_text = f"Highlight Shimmer at {time_stamp:.2f}s"
-    #     print(f"Highlight Shimmer at {time_stamp:.2f}s")
-    #     error_frame = frame.copy()
-    #     error_counter = error_duration
+    if checkHighlightsFrame(frame,lmask):
+        error_text = f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}"
+        print(f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}")
+        error_frame = frame.copy()
+        error_counter = error_duration
 
-    # if prev_frame is not None and detect_frozen_frame(prev_frame, frame):
-    #     print(f"Frozen Frame at {time_stamp:.2f}s")
-    #     error_text = f"Frozen Frame at {time_stamp:.2f}s"
-    #     frozen_frame_flags.append(1)
-    #     error_frame = frame.copy()
-    #     error_counter = error_duration
+    if prev_frame is not None and detect_frozen_frame(prev_frame, frame):
+        print(f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}")
+        error_text = f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}"
+        frozen_frame_flags.append(1)
+        error_frame = frame.copy()
+        error_counter = error_duration
+        frozen_frame_buffer.append(1)
 
-    # else:
-    #     frozen_frame_flags.append(0)
+    else:
+        frozen_frame_flags.append(0)
+        frozen_frame_buffer.append(0)
+
+    # Only check the sum if the buffer has at least `window_size` elements
+    if len(frozen_frame_buffer) >= window_size:
+        #print(f"Window sum: {sum(frozen_frame_buffer)}")  # Print the sum
+        if sum(frozen_frame_buffer) > 4:
+            print(f"Frozen Frame Error Detected (More than 4 in the last {window_size} frames)")
+
+        frozen_frame_buffer.pop(0)
 
     # only check pano if we did not already detect a dropout (because pano flags dropout)
     if black_state != 1:
         pano_state = checkPanoEdge(frame,shrunk_mask)
         if pano_state == 1:
-            error_text = f"Pano-70 Error at {time_stamp:.2f}s"
-            print(f"Pano-70 Error at {time_stamp:.2f}s")
+            error_text = f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}"
+            print(f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}")
             error_frame = frame.copy()
             error_counter = error_duration
 
@@ -290,7 +313,7 @@ print(f"Original FPS: {fps}, Calculated FPS: {actual_fps:.2f}")
 output_folder = "Error_Videos"
 os.makedirs(output_folder, exist_ok=True)  # Create the folder if it doesn't exist
 
-# Get a list of all existing files in the folder
+# Get a list of all existing files in the folderqq
 existing_files = os.listdir(output_folder)
 
 # Find the highest existing video index
@@ -322,24 +345,24 @@ if np.abs(actual_fps - fps) > 5:
     print(f"Video rewritten with FPS: {actual_fps:.2f}. Saved as '{output_video_path}'")
 
 else:
-    time.sleep(2)
+    time.sleep(20)
     os.rename(error_video_path, output_video_path)
     print(f"Saved intermediate video as final output: '{output_video_path}'")
 
 
 print("--- %s seconds ---" % (time.time() - codeStart))
 
-# window_size = 10
+window_size = 10
 
-# # Sliding window sum
-# window_sums = [sum(frozen_frame_flags[i:i+window_size]) for i in range(len(frozen_frame_flags) - window_size + 1)]
+# Sliding window sum
+window_sums = [sum(frozen_frame_flags[i:i+window_size]) for i in range(len(frozen_frame_flags) - window_size + 1)]
 
-# # Plotting with window sum (window sum for visualizing concentration otherwise we would see a bunch of 1's in a row)
-# plt.figure(figsize=(10, 5))
-# plt.plot(window_sums, label='Window Sums')
-# #plt.axhline(y=np.mean(window_sums), color='r', linestyle='--', label='Mean')
-# plt.xlabel('Index')
-# plt.ylabel('Sum of Ones')
-# plt.title('Concentration of Detections')
-# plt.legend()
-# plt.show()
+# Plotting with window sum (window sum for visualizing concentration otherwise we would see a bunch of 1's in a row)
+plt.figure(figsize=(10, 5))
+plt.plot(window_sums, label='Window Sums')
+#plt.axhline(y=np.mean(window_sums), color='r', linestyle='--', label='Mean')
+plt.xlabel('Index')
+plt.ylabel('Sum of Ones')
+plt.title('Concentration of Detections')
+plt.legend()
+plt.show()

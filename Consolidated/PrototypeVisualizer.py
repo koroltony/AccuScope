@@ -15,7 +15,7 @@ from source.panoto70fcn import checkPanoEdge
 # Get video path:
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-video_path = os.path.join(current_dir, "source", "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo50.mp4")
+video_path = os.path.join(current_dir, "source", "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo141.mp4")
 
 
 codeStart = time.time()
