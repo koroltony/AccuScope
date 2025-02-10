@@ -3,6 +3,7 @@ import numpy as np
 import time
 import keyboard
 import os
+import shutil
 import matplotlib.pyplot as plt
 from source.greenVectorizedSolution import checkGreenFrame
 from source.magentaScreen import checkMagentaFrame
@@ -312,7 +313,7 @@ print(f"Original FPS: {fps}, Calculated FPS: {actual_fps:.2f}")
 output_folder = "Error_Videos"
 os.makedirs(output_folder, exist_ok=True)  # Create the folder if it doesn't exist
 
-# Get a list of all existing files in the folderqq
+# Get a list of all existing files in the folder
 existing_files = os.listdir(output_folder)
 
 # Find the highest existing video index
@@ -325,11 +326,9 @@ next_index = max(video_indices, default=0) + 1
 output_video_path = os.path.join(output_folder, f"finalVideo{next_index}.mp4")
 
 if np.abs(actual_fps - fps) > 5:
-
     # Rewrite video with actual FPS
     print("Rewriting video to get correct FPS after processing")
     cap = cv2.VideoCapture(error_video_path)
-
     out_corrected = cv2.VideoWriter(output_video_path, cv2.VideoWriter_fourcc(*'mp4v'), actual_fps, output_size)
 
     while True:
@@ -340,14 +339,21 @@ if np.abs(actual_fps - fps) > 5:
 
     cap.release()
     out_corrected.release()
-
     print(f"Video rewritten with FPS: {actual_fps:.2f}. Saved as '{output_video_path}'")
 
 else:
-    time.sleep(20)
-    os.rename(error_video_path, output_video_path)
-    print(f"Saved intermediate video as final output: '{output_video_path}'")
-
+    max_attempts = 10
+    wait_time = 2
+    for attempt in range(max_attempts):
+        try:
+            shutil.move(error_video_path, output_video_path)
+            print(f"Saved intermediate video as final output: '{output_video_path}'")
+            break
+        except PermissionError:
+            print(f"Attempt {attempt+1} failed. Retrying...")
+            time.sleep(wait_time)
+    else:
+        print("Failed to rename video after multiple attempts.")
 
 print("--- %s seconds ---" % (time.time() - codeStart))
 
