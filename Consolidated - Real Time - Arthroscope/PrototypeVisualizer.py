@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import time
 import keyboard
-import sys
 import os
 import matplotlib.pyplot as plt
 from source.greenVectorizedSolution import checkGreenFrame
@@ -228,11 +227,11 @@ while True:
         error_frame = frame.copy()
         error_counter = error_duration
 
-    if checkHighlightsFrame(frame,lmask):
-        error_text = f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}"
-        print(f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}")
-        error_frame = frame.copy()
-        error_counter = error_duration
+    # if checkHighlightsFrame(frame,lmask):
+    #     error_text = f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}"
+    #     print(f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}")
+    #     error_frame = frame.copy()
+    #     error_counter = error_duration
 
     if prev_frame is not None and detect_frozen_frame(prev_frame, frame):
         print(f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}")

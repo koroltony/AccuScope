@@ -72,9 +72,6 @@ def checkPanoEdge(frame, lmask):
 
     # Thresholds are optimized for 1080p video
 
-    frame = cv2.resize(frame,[1920,1080])
-    lmask = cv2.resize(lmask,[1920,1080])
-
     edges = cv2.Canny(frame, threshold1=400, threshold2=600)
 
     # # Shrink the mask inward by a few pixels because the edge of the mask gets in the way
