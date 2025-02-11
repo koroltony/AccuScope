@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import time
 import keyboard
-import sys
 import os
+import shutil
 import matplotlib.pyplot as plt
 from source.greenVectorizedSolution import checkGreenFrame
 from source.magentaScreen import checkMagentaFrame
@@ -19,20 +19,30 @@ codeStart = time.time()
 frozen_frame_flags = []
 
 # Initialize video stream
-video = cv2.VideoCapture(1)
+video = cv2.VideoCapture(2)
+
+# Set the MJPG codec
+video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+
+# set the frame rate:
+
+video.set(cv2.CAP_PROP_FPS,60)
+
+# Make sure it is not repeating frames
+
+video.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
 if not video.isOpened():
     print("Camera could not be opened")
     exit()
 
 fps = int(video.get(cv2.CAP_PROP_FPS))
-print(fps)
 frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
 output_size = (2*frame_width, frame_height)
 
 # Create an output stream to hold the prototype video
-out = cv2.VideoWriter(error_video_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, output_size)
+out = cv2.VideoWriter(error_video_path, cv2.VideoWriter_fourcc(*'mp4v'), 60, output_size)
 
 # create mask for arthroscope footage based on first frame
 
@@ -95,7 +105,17 @@ while True:
 
     edges = cv2.bitwise_and(edges, edges, mask=shrunk_mask)
 
-    cv2.imshow('Pano-70 Mask',edges)
+    # Convert edges to a 3-channel red overlay (R=255, G=0, B=0)
+    edges_red = cv2.merge([np.zeros_like(edges), np.zeros_like(edges), edges])
+
+    # Convert the mask to a 3-channel green overlay (R=0, G=255, B=0)
+    mask_green = cv2.merge([np.zeros_like(shrunk_mask), shrunk_mask, np.zeros_like(shrunk_mask)])
+    mask_green = (mask_green * 0.3).astype(np.uint8)
+
+    # Overlay edges onto the mask
+    overlay = cv2.addWeighted(mask_green, 0.5, edges_red, 1, 0)
+
+    cv2.imshow('Pano-70 Mask',overlay)
 
     # Wait for a key press for 1ms and check if 'k' is pressed
     key = cv2.waitKey(1) & 0xFF
@@ -120,9 +140,6 @@ error_counter = 0
 
 print('Press "q" to exit recording')
 
-frame_count = 0
-start_time = time.time()
-
 # Raw Video Saving
 # ------------------------------------------------
 output_folder = "Raw_Videos"
@@ -142,7 +159,28 @@ output_video_path = os.path.join(output_folder, f"RawVideo{next_index}.mp4")
 
 saved_vid = cv2.VideoWriter(output_video_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, [frame_width,frame_height])
 
+frame_count = 0
+start_time = time.time()
+
 # -------------------------------------------------
+
+# ---------------- Code for frame Grabbing (frozen frame debugging)-----
+currentFrame = 1
+# path = 'Real_Time_Frames'
+# for filename in os.listdir(path):
+#         file_path = os.path.join(path, filename)
+#         if os.path.isfile(file_path):
+#             try:
+#                 os.remove(file_path)
+#             except OSError as e:
+#                 print(f"Error deleting {file_path}: {e}")
+# time.sleep(5)
+# print("Frames Folder Cleared, Capturing New Footage")
+
+# ----------------------------------------------------------------------q
+
+window_size = 10
+frozen_frame_buffer = []
 
 while True:
 
@@ -150,62 +188,78 @@ while True:
     if not ret:
         break
 
+    # filePathAndOutputName = os.path.join(path, f'frame{currentFrame}.jpg')
+    # cv2.imwrite(filePathAndOutputName, frame)
+
+    currentFrame += 1
+    # print(frame_count)
+    # print(f"Frame {frame_count} sum: {np.sum(frame)}")
     frame_count += 1
 
-    time_stamp = time.time() - codeStart
+    time_stamp = currentFrame/fps
 
     # Check Errors
     green_state = checkGreenFrame(frame)
     if green_state == 1:
         # Create error text and error frame variables to display later
-        error_text = f"Majority Green Screen Error at {time_stamp:.2f}s"
-        print(f"Majority Green Screen Error at {time_stamp:.2f}s")
+        error_text = f"Majority Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}"
+        print(f"Majority Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_frame = frame.copy()
         error_counter = error_duration
     elif green_state == 2:
-        error_text = f"Partial Green Screen Error at {time_stamp:.2f}s"
+        error_text = f"Partial Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}"
         error_frame = frame.copy()
-        print(f"Partial Green Screen Error at {time_stamp:.2f}s")
+        print(f"Partial Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_counter = error_duration
 
     magenta_state = checkMagentaFrame(frame)
     if magenta_state == 1:
         # Create error text and error frame variables to display later
-        error_text = f"Magenta Screen Error at {time_stamp:.2f}s"
-        print(f"Magenta Screen Error at {time_stamp:.2f}s")
+        error_text = f"Magenta Screen Error at {time_stamp:.2f}s and frame: {currentFrame}"
+        print(f"Magenta Screen Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_frame = frame.copy()
         error_counter = error_duration
 
     black_state = checkBlackFrame(frame,lmask)
     if black_state == 1:
         # Create error text and error frame variables to display later
-        error_text = f"Dropout Error at {time_stamp:.2f}s"
-        print(f"Dropout Error at {time_stamp:.2f}s")
+        error_text = f"Dropout Error at {time_stamp:.2f}s and frame: {currentFrame}"
+        print(f"Dropout Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_frame = frame.copy()
         error_counter = error_duration
 
-    if checkHighlightsFrame(frame,lmask):
-        error_text = f"Highlight Shimmer at {time_stamp:.2f}s"
-        print(f"Highlight Shimmer at {time_stamp:.2f}s")
-        error_frame = frame.copy()
-        error_counter = error_duration
+    # if checkHighlightsFrame(frame,lmask):
+    #     error_text = f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}"
+    #     print(f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}")
+    #     error_frame = frame.copy()
+    #     error_counter = error_duration
 
     if prev_frame is not None and detect_frozen_frame(prev_frame, frame):
-        error_text = f"Frozen Frame at {time_stamp:.2f}s"
-        print(f"Frozen Frame at {time_stamp:.2f}s")
+        print(f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}")
+        error_text = f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}"
         frozen_frame_flags.append(1)
         error_frame = frame.copy()
         error_counter = error_duration
+        frozen_frame_buffer.append(1)
 
     else:
         frozen_frame_flags.append(0)
+        frozen_frame_buffer.append(0)
+
+    # Only check the sum if the buffer has at least `window_size` elements
+    if len(frozen_frame_buffer) >= window_size:
+        #print(f"Window sum: {sum(frozen_frame_buffer)}")  # Print the sum
+        if sum(frozen_frame_buffer) > 4:
+            print(f"Frozen Frame Error Detected (More than 4 in the last {window_size} frames)")
+
+        frozen_frame_buffer.pop(0)
 
     # only check pano if we did not already detect a dropout (because pano flags dropout)
     if black_state != 1:
         pano_state = checkPanoEdge(frame,shrunk_mask)
         if pano_state == 1:
-            error_text = f"Pano-70 Error at {time_stamp:.2f}s"
-            print(f"Pano-70 Error at {time_stamp:.2f}s")
+            error_text = f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}"
+            print(f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}")
             error_frame = frame.copy()
             error_counter = error_duration
 
@@ -246,18 +300,14 @@ while True:
 
 video.release()
 out.release()
-cv2.destroyAllWindows()
 saved_vid.release()
+cv2.destroyAllWindows()
 
 # Calculate actual FPS
 end_time = time.time()
 actual_duration = end_time - start_time  # Total duration in seconds
 actual_fps = int(frame_count / actual_duration)
 print(f"Original FPS: {fps}, Calculated FPS: {actual_fps:.2f}")
-
-# Rewrite video with actual FPS
-print("Rewriting video to get correct FPS after processing")
-cap = cv2.VideoCapture(error_video_path)
 
 # Define the folder to save videos
 output_folder = "Error_Videos"
@@ -275,33 +325,49 @@ next_index = max(video_indices, default=0) + 1
 # Define the output video path with the new name
 output_video_path = os.path.join(output_folder, f"finalVideo{next_index}.mp4")
 
-out_corrected = cv2.VideoWriter(output_video_path, cv2.VideoWriter_fourcc(*'mp4v'), actual_fps, output_size)
+if np.abs(actual_fps - fps) > 5:
+    # Rewrite video with actual FPS
+    print("Rewriting video to get correct FPS after processing")
+    cap = cv2.VideoCapture(error_video_path)
+    out_corrected = cv2.VideoWriter(output_video_path, cv2.VideoWriter_fourcc(*'mp4v'), actual_fps, output_size)
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
-    out_corrected.write(frame)
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        out_corrected.write(frame)
 
-# Release all resources
-cap.release()
-out_corrected.release()
+    cap.release()
+    out_corrected.release()
+    print(f"Video rewritten with FPS: {actual_fps:.2f}. Saved as '{output_video_path}'")
 
-print(f"Video rewritten with FPS: {actual_fps:.2f}. Saved as '{output_video_path}'")
+else:
+    max_attempts = 10
+    wait_time = 2
+    for attempt in range(max_attempts):
+        try:
+            shutil.move(error_video_path, output_video_path)
+            print(f"Saved intermediate video as final output: '{output_video_path}'")
+            break
+        except PermissionError:
+            print(f"Attempt {attempt+1} failed. Retrying...")
+            time.sleep(wait_time)
+    else:
+        print("Failed to rename video after multiple attempts.")
 
 print("--- %s seconds ---" % (time.time() - codeStart))
 
-# window_size = 10
+window_size = 10
 
-# # Sliding window sum
-# window_sums = [sum(frozen_frame_flags[i:i+window_size]) for i in range(len(frozen_frame_flags) - window_size + 1)]
+# Sliding window sum
+window_sums = [sum(frozen_frame_flags[i:i+window_size]) for i in range(len(frozen_frame_flags) - window_size + 1)]
 
-# # Plotting with window sum (window sum for visualizing concentration otherwise we would see a bunch of 1's in a row)
-# plt.figure(figsize=(10, 5))
-# plt.plot(window_sums, label='Window Sums')
-# #plt.axhline(y=np.mean(window_sums), color='r', linestyle='--', label='Mean')
-# plt.xlabel('Index')
-# plt.ylabel('Sum of Ones')
-# plt.title('Concentration of Detections')
-# plt.legend()
-# plt.show()
+# Plotting with window sum (window sum for visualizing concentration otherwise we would see a bunch of 1's in a row)
+plt.figure(figsize=(10, 5))
+plt.plot(window_sums, label='Window Sums')
+#plt.axhline(y=np.mean(window_sums), color='r', linestyle='--', label='Mean')
+plt.xlabel('Index')
+plt.ylabel('Sum of Ones')
+plt.title('Concentration of Detections')
+plt.legend()
+plt.show()
