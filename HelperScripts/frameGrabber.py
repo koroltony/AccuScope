@@ -48,9 +48,9 @@ def captureFrames(video, startTime, endTime, path):
 
 #Main Function with Test
 if __name__=="__main__":
-    video = cv2.VideoCapture('green flash lag.mp4')
-    startTime = 5
-    endTime = 7
-    path = 'C:/Users/zionc/Documents/Arthrex/green flash lag pictures'
+    video = cv2.VideoCapture('C:/Users/zionc/Videos/videoWithText.mkv')
+    startTime = 0
+    endTime = 4
+    path = 'OpticalCharacterRecognition/testImages'
 
     captureFrames(video, startTime, endTime, path)
