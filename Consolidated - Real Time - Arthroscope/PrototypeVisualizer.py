@@ -162,6 +162,26 @@ saved_vid = cv2.VideoWriter(output_video_path, cv2.VideoWriter_fourcc(*'mp4v'), 
 frame_count = 0
 start_time = time.time()
 
+# ---------------------------------
+
+output_folder2 = "Edge_images"
+os.makedirs(output_folder2, exist_ok=True)
+# Get a list of all existing files in the folder
+existing_files2 = os.listdir(output_folder2)
+
+# Find the highest existing video index
+video_indices2 = [
+    int(f.split("Edge")[1].split(".")[0]) for f in existing_files2 if f.startswith("Edge") and f.endswith(".mp4")
+]
+next_index2 = max(video_indices2, default=0) + 1
+
+# Define the output video path with the new name
+output_video_path2 = os.path.join(output_folder2, f"Edge{next_index2}.mp4")
+
+savededge_vid = cv2.VideoWriter(output_video_path2, cv2.VideoWriter_fourcc(*'mp4v'), fps, [640,480])
+
+
+
 # -------------------------------------------------
 
 # ---------------- Code for frame Grabbing (frozen frame debugging)-----
@@ -256,7 +276,9 @@ while True:
 
     # only check pano if we did not already detect a dropout (because pano flags dropout)
     if black_state != 1:
-        pano_state = checkPanoEdge(frame,shrunk_mask)
+        pano_state_return = checkPanoEdge(frame,shrunk_mask)
+        pano_state = pano_state_return[0]
+        edge_frame = pano_state_return[1]
         if pano_state == 1:
             error_text = f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}"
             print(f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}")
@@ -280,8 +302,18 @@ while True:
         cv2.putText(error_display, 'Error Stream', top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
         cv2.putText(error_display, 'No Error', center_pos, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
 
+    if not savededge_vid.isOpened():
+        print("Error: VideoWriter failed to open.")
+
+    if edge_frame is not None:
+        savededge_vid.write(edge_frame)
+    else:
+        print("Warning: edge_frame is None at frame", currentFrame)
+
+
     # Label the input frame
     saved_vid.write(frame)
+    savededge_vid.write(edge_frame)
 
     cv2.putText(frame, 'Input Video', top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
 
@@ -293,14 +325,20 @@ while True:
 
     prev_frame = frame.copy()
 
+    #print("Frame size:", frame.shape if frame is not None else "None")
+    #print("Edge frame size:", edge_frame.shape if edge_frame is not None else "None")
+
+
     # Exit on 'q' key press
     if keyboard.is_pressed('q'):  # Detect 'q' key globally
         print("Ending Recording")
         break
 
+
 video.release()
 out.release()
 saved_vid.release()
+savededge_vid.release()
 cv2.destroyAllWindows()
 
 # Calculate actual FPS

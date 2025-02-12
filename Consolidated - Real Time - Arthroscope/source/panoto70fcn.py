@@ -72,7 +72,7 @@ def checkPanoEdge(frame, lmask):
 
     # Thresholds are optimized for 1080p video
 
-    edges = cv2.Canny(frame, threshold1=400, threshold2=600)
+    edges = cv2.Canny(frame, threshold1=200, threshold2=400)
 
     # # Shrink the mask inward by a few pixels because the edge of the mask gets in the way
     # kernel = np.ones((3, 3), np.uint8)
@@ -99,7 +99,7 @@ def checkPanoEdge(frame, lmask):
             longEdges.append(contour)
 
     # If there is more than 1 edge, it is probably a pano to 70 glitch
-    return len(longEdges)>1
+    return len(longEdges)>1, edges
 
 
 #Main Function with Test
