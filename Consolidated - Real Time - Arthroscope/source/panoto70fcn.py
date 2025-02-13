@@ -20,7 +20,7 @@ def checkPanoEdge_test(frame, prev_frame, lmask,diff_pix_array):
 
     diff = cv2.absdiff(frame, prev_frame)
     gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-    diff_pixels = np.count_nonzero(gray_diff>10)/(1080*1920);
+    diff_pixels = np.exp(np.count_nonzero(gray_diff>10)/(1080*1920));
     diff_pix_array.append(diff_pixels)
 
     edges = cv2.Canny(frame, threshold1=2, threshold2=400)
@@ -38,7 +38,7 @@ def checkPanoEdge_test(frame, prev_frame, lmask,diff_pix_array):
             if abs(angle) < 10:
                 horizontal_edges.append(contour)
 
-    pano_detected = (len(horizontal_edges) > 1) and (diff_pixels > 0.2)
+    pano_detected = (len(horizontal_edges) > 1) and (diff_pixels > 1.3)
 
     return pano_detected, edges
 
@@ -78,8 +78,8 @@ if __name__ == "__main__":
     diff_pix_array = []
 
     w, h = 1920,1080
-    # video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo158.mp4")
     video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo158.mp4")
+    # video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/panoto70/Pano to 70 glitch.mp4")
 
     if not video.isOpened():
         print("Error: Could not open video.")
