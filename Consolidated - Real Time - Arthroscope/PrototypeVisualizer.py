@@ -278,7 +278,7 @@ while True:
     if black_state != 1:
         pano_state_return = checkPanoEdge(frame,shrunk_mask)
         pano_state = pano_state_return[0]
-        edge_frame = pano_state_return[1]
+        edge_frame = np.uint8(pano_state_return[1])
         if pano_state == 1:
             error_text = f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}"
             print(f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}")
