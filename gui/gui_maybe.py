@@ -6,11 +6,7 @@ import tkinter as tk
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..')) 
 sys.path.append(parent_dir)
 
-# Print the current sys.path for debugging 
-#print("Current sys.path:") 
-#for path in sys.path: 
-#    print(path)
-
+import threading
 import cv2
 import numpy as np
 import time
@@ -28,12 +24,15 @@ from Frozen.lagff15 import detect_frozen_frame
 from HelperScripts.auto_mask import create_mask
 from panoto70.panoto70fcn import checkPano
 
+currentFrame = 1
 
 class VideoPlayer:
     def __init__(self, root):
         self.root = root
         self.root.title("Video Player")
-        self.root.geometry("1000x700")
+        self.root.geometry("1000x660")
+
+        self.lock = threading.Lock()
 
         # Create and place the canvas for video playback
         self.canvas = tk.Canvas(root, width=640, height=480)
@@ -52,6 +51,10 @@ class VideoPlayer:
         # Create and place the Choose File button
         self.choose_button = tk.Button(root, text="Choose File", command=self.choose_file)
         self.choose_button.grid(row=2, column=0, padx=5, pady=5)
+
+        # Create and place the Real-Time button
+        self.realtime_button = tk.Button(root, text="Real-Time", command=self.realtime_video)
+        self.realtime_button.grid(row=3, column=0, padx=5, pady=5)
 
         # Create and place the Play button
         self.play_button = tk.Button(root, text="Play", command=self.play_video)
@@ -78,6 +81,7 @@ class VideoPlayer:
         self.frozen_frame_flags = []
         self.start_time = None
         self.fps = 0
+
 
     def update_status(self, message, remaining_time, color="black"):
         self.status_label.config(text=f"{message}\nRemaining time: {remaining_time}", fg=color)
@@ -113,63 +117,78 @@ class VideoPlayer:
         else:
             self.update_status("No video detected.", "N/A", "red")
 
+    def realtime_video(self):
+        self.cap = cv2.VideoCapture(0)  # Open the default webcam
+        if not self.cap.isOpened():
+            self.update_status("Error with webcam.", "N/A", "red")
+            return
+        self.update_status("Real-time video is currently playing.", "N/A", "green")
+        self.play_flag = True
+        self.start_time = time.time()
+        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
+        self.frozen_frame_flags = []
+        self.process_video_frame()
+
     def process_video_frame(self):
         if self.play_flag and self.cap is not None:
             ret, frame = self.cap.read()
             if ret:
                 frame = cv2.resize(frame, (640, 480))
-                self.detect_and_display_errors(frame)
+                threading.Thread(target=self.detect_and_display_errors, args=(frame,)).start()
 
-                # Update the progress bar and check if the video is playing in real time
-                current_time = self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
-                total_time = self.cap.get(cv2.CAP_PROP_FRAME_COUNT) / self.cap.get(cv2.CAP_PROP_FPS)
-                self.progress_bar['value'] = (current_time / total_time) * 100
-                self.progress_label.config(text=f"{int(current_time//60)}:{int(current_time%60):02d} / {int(total_time//60)}:{int(total_time%60):02d}")
+                if self.file_path:
+                    # Update the progress bar and check if the video is playing in real time
+                    current_time = self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
+                    total_time = self.cap.get(cv2.CAP_PROP_FRAME_COUNT) / self.cap.get(cv2.CAP_PROP_FPS)
+                    self.progress_bar['value'] = (current_time / total_time) * 100
+                    self.progress_label.config(text=f"{int(current_time//60)}:{int(current_time%60):02d} / {int(total_time//60)}:{int(total_time%60):02d}")
 
-                # Check if video is playing in real time and calculate time discrepancy
-                elapsed_real_time = time.time() - self.start_time
-                speed_ratio = current_time / elapsed_real_time
-                percentage = speed_ratio * 100
+                    # Check if video is playing in real time and calculate time discrepancy
+                    elapsed_real_time = time.time() - self.start_time
+                    speed_ratio = current_time / elapsed_real_time
+                    percentage = speed_ratio * 100
 
-                if abs(elapsed_real_time - current_time) < 1:
-                    self.update_status(f"Video playing in real time. ({percentage:.2f}%)", "N/A", "green")
-                else:
-                    remaining_real_time = (total_time - current_time) / speed_ratio
-                    self.update_status(f"Video not playing in real time. ({percentage:.2f}%)", f"{int(remaining_real_time//60)}:{int(remaining_real_time%60):02d}", "red")
+                    if abs(elapsed_real_time - current_time) < 1:
+                        self.update_status(f"Video playing in real time. ({percentage:.2f}%)", "N/A", "green")
+                    else:
+                        remaining_real_time = (total_time - current_time) / speed_ratio
+                        self.update_status(f"Video not playing in real time. ({percentage:.2f}%)", f"{int(remaining_real_time//60)}:{int(remaining_real_time%60):02d}", "red")
 
-                self.root.after(25, self.process_video_frame)
+                self.root.after(16, self.process_video_frame)
             else:
                 self.cap.release()
                 self.update_status("Finished playing video.", "0:00", "blue")
                 self.canvas.delete("all")
 
     def detect_and_display_errors(self, frame):
-        error_display = np.zeros_like(frame)
-        error_text = "No Error"
+        with self.lock:
+            error_display = np.zeros_like(frame)
+            error_text = "No Error"
+            currentFrame = self.cap.get(cv2.CAP_PROP_POS_FRAMES)
 
         # Example of integrating error detection scripts
         green_state = checkGreenFrame(frame)
         if green_state:
-            error_text = f"Green Screen Error Detected"
+            error_text = f"Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds"
             self.update_log(error_text, "red")
 
         magenta_state = checkMagentaFrame(frame)
         if magenta_state:
-            error_text = f"Magenta Screen Error Detected"
+            error_text = f"Magenta Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds"
             self.update_log(error_text, "red")
 
         black_state = checkBlackFrame(frame)
         if black_state:
-            error_text = f"Dropout Error Detected"
+            error_text = f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds"
             self.update_log(error_text, "red")
 
         if checkHighlightsFrame(frame):
-            error_text = f"Highlight Shimmer Detected"
+            error_text = f"Highlight Shimmer Detected at {round((currentFrame/self.fps), 4)} seconds"
             self.update_log(error_text, "red")
 
         # Assume prev_frame is stored for frozen frame detection
         if hasattr(self, 'prev_frame') and detect_frozen_frame(self.prev_frame, frame):
-            error_text = f"Frozen Frame Detected"
+            error_text = f"Frozen Frame Detected at {round((currentFrame/self.fps), 4)} seconds"
             self.update_log(error_text, "red")
             self.frozen_frame_flags.append(1)
         else:
@@ -179,7 +198,7 @@ class VideoPlayer:
         lmask, smask = create_mask(frame)
         pano_state = checkPano(frame, smask, lmask)
         if pano_state:
-            error_text = f"Pano-70 Error Detected"
+            error_text = f"Pano-70 Error Detected at {round((currentFrame/self.fps), 4)} seconds"
             self.update_log(error_text, "red")
 
         # Update previous frame for frozen frame detection

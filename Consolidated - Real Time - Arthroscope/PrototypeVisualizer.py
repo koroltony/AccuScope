@@ -258,8 +258,8 @@ while True:
         print(f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}")
         error_text = f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}"
         frozen_frame_flags.append(1)
-        error_frame = frame.copy()
-        error_counter = error_duration
+        #error_frame = frame.copy()
+        #error_counter = error_duration
         frozen_frame_buffer.append(1)
 
     else:
@@ -271,14 +271,17 @@ while True:
         #print(f"Window sum: {sum(frozen_frame_buffer)}")  # Print the sum
         if sum(frozen_frame_buffer) > 4:
             print(f"Frozen Frame Error Detected (More than 4 in the last {window_size} frames)")
+            error_frame = frame.copy()
+            error_counter = error_duration
 
         frozen_frame_buffer.pop(0)
 
     # only check pano if we did not already detect a dropout (because pano flags dropout)
     if black_state != 1:
-        pano_state_return = checkPanoEdge(frame,shrunk_mask)
+        pano_state_return = checkPanoEdge(frame,shrunk_mask, currentFrame)
         pano_state = pano_state_return[0]
         edge_frame = np.uint8(pano_state_return[1])
+        edge_frame = cv2.merge((edge_frame, edge_frame, edge_frame))
         if pano_state == 1:
             error_text = f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}"
             print(f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}")
@@ -310,7 +313,9 @@ while True:
     else:
         print("Warning: edge_frame is None at frame", currentFrame)
 
-
+    #print(type(frame), frame.shape)
+    #print(type(edge_frame), edge_frame.shape)
+    
     # Label the input frame
     saved_vid.write(frame)
     savededge_vid.write(edge_frame)
