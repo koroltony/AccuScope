@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from source.greenVectorizedSolution import checkGreenFrame
 from source.magentaScreen import checkMagentaFrame
 from source.dropoutScreen import checkBlackFrame
-from source.highlights import checkHighlightsFrame
+from source.highlights import checkHighlightsFrameq
 from source.lagff15 import detect_frozen_frame
 from source.auto_mask import create_mask
 from source.panoto70fcn import checkPanoEdge
@@ -278,7 +278,7 @@ while True:
 
     # only check pano if we did not already detect a dropout (because pano flags dropout)
     if black_state != 1:
-        pano_state_return = checkPanoEdge(frame,shrunk_mask, currentFrame)
+        pano_state_return = checkPanoEdge(frame,prev_frame,shrunk_mask)
         pano_state = pano_state_return[0]
         edge_frame = np.uint8(pano_state_return[1])
         edge_frame = cv2.merge((edge_frame, edge_frame, edge_frame))
@@ -315,7 +315,7 @@ while True:
 
     #print(type(frame), frame.shape)
     #print(type(edge_frame), edge_frame.shape)
-    
+
     # Label the input frame
     saved_vid.write(frame)
     savededge_vid.write(edge_frame)
