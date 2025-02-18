@@ -43,9 +43,9 @@ def checkPanoEdge_test(frame, prev_frame, lmask, diff_pix_array):
             [vx, vy, x, y] = cv2.fitLine(contour, cv2.DIST_L2, 0, 0.01, 0.01)
             angle = np.arctan2(vy, vx) * (180 / np.pi)
             if abs(angle) < 10:
-                horizontal_edges.append(contour)
+                horizontal_edges.append(1)
 
-    pano_detected = (len(horizontal_edges) > 1) and (diff_pixels > 0.3*10**(7))
+    pano_detected = (len(horizontal_edges) > 3) and (diff_pixels > 0.3*10**(7))
 
     return pano_detected, edges
 
@@ -82,9 +82,9 @@ def checkPanoEdge(frame, prev_frame, lmask):
             [vx, vy, x, y] = cv2.fitLine(contour, cv2.DIST_L2, 0, 0.01, 0.01)
             angle = np.arctan2(vy, vx) * (180 / np.pi)
             if abs(angle) < 10:
-                horizontal_edges.append(contour)
+                horizontal_edges.append(1)
 
-    pano_detected = (len(horizontal_edges) > 1) and (diff_pixels > 0.3*10**(7))
+    pano_detected = (len(horizontal_edges) > 3) and (diff_pixels > 0.3*10**(7))
 
     return pano_detected, edges
 
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     diff_pix_array = []
 
     w, h = 1920,1080
-    video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo168.mp4")
+    video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo142.mp4")
     #video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/panoto70/Pano to 70 glitch.mp4")
 
     if not video.isOpened():
