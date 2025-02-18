@@ -255,8 +255,8 @@ while True:
     #     error_counter = error_duration
 
     if prev_frame is not None and detect_frozen_frame(prev_frame, frame):
-        print(f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}")
-        error_text = f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}"
+        #print(f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}")
+        #error_text = f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}"
         frozen_frame_flags.append(1)
         #error_frame = frame.copy()
         #error_counter = error_duration
@@ -271,6 +271,7 @@ while True:
         #print(f"Window sum: {sum(frozen_frame_buffer)}")  # Print the sum
         if sum(frozen_frame_buffer) > 4:
             print(f"Frozen Frame Error Detected (More than 4 in the last {window_size} frames)")
+            error_text = f"Frozen Frame Error at {time_stamp:.2f}s and frame: {currentFrame}"
             error_frame = frame.copy()
             error_counter = error_duration
 
