@@ -105,10 +105,10 @@ while True:
 
     edges = cv2.bitwise_and(edges, edges, mask=shrunk_mask)
 
-    # Convert edges to a 3-channel red overlay (R=255, G=0, B=0)
+    # Make edges red
     edges_red = cv2.merge([np.zeros_like(edges), np.zeros_like(edges), edges])
 
-    # Convert the mask to a 3-channel green overlay (R=0, G=255, B=0)
+    # Make mask background green
     mask_green = cv2.merge([np.zeros_like(shrunk_mask), shrunk_mask, np.zeros_like(shrunk_mask)])
     mask_green = (mask_green * 0.3).astype(np.uint8)
 
@@ -268,7 +268,7 @@ while True:
 
     # Only check the sum if the buffer has at least `window_size` elements
     if len(frozen_frame_buffer) >= window_size:
-        #print(f"Window sum: {sum(frozen_frame_buffer)}")  # Print the sum
+        #print(f"Window sum: {sum(frozen_frame_buffer)}")
         if sum(frozen_frame_buffer) > 4:
             print(f"Frozen Frame Error Detected (More than 4 in the last {window_size} frames)")
             error_text = f"Frozen Frame Error at {time_stamp:.2f}s and frame: {currentFrame}"
@@ -336,7 +336,7 @@ while True:
 
 
     # Exit on 'q' key press
-    if keyboard.is_pressed('q'):  # Detect 'q' key globally
+    if keyboard.is_pressed('q'):
         print("Ending Recording")
         break
 
@@ -349,13 +349,13 @@ cv2.destroyAllWindows()
 
 # Calculate actual FPS
 end_time = time.time()
-actual_duration = end_time - start_time  # Total duration in seconds
+actual_duration = end_time - start_time
 actual_fps = int(frame_count / actual_duration)
 print(f"Original FPS: {fps}, Calculated FPS: {actual_fps:.2f}")
 
 # Define the folder to save videos
 output_folder = "Error_Videos"
-os.makedirs(output_folder, exist_ok=True)  # Create the folder if it doesn't exist
+os.makedirs(output_folder, exist_ok=True)
 
 # Get a list of all existing files in the folder
 existing_files = os.listdir(output_folder)
