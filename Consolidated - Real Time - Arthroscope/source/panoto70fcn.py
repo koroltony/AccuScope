@@ -16,13 +16,20 @@ sys.path.append(helper_scripts_dir)
 
 # ----------- Function for Testing at Home (with Post-Process Footage) --------
 
-def checkPanoEdge_test(frame, prev_frame, lmask,diff_pix_array):
+def checkPanoEdge_test(frame, prev_frame, lmask, diff_pix_array):
 
+    # Compute absolute difference within the mask
     diff = cv2.absdiff(frame, prev_frame)
     gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-    diff_pixels = np.exp(np.count_nonzero(gray_diff>10)/(1080*1920));
+    masked_diff = cv2.bitwise_and(gray_diff, gray_diff, mask=lmask)
+
+    # Count nonzero pixels within the mask
+    mask_size = np.count_nonzero(lmask)
+
+    diff_pixels = np.exp(20*(np.count_nonzero(masked_diff > 10) / mask_size))
     diff_pix_array.append(diff_pixels)
 
+    # Detect horizontal edges within the mask
     edges = cv2.Canny(frame, threshold1=2, threshold2=400)
     edges = cv2.bitwise_and(edges, edges, mask=lmask)
 
@@ -32,24 +39,36 @@ def checkPanoEdge_test(frame, prev_frame, lmask,diff_pix_array):
 
     for contour in contours:
         if cv2.arcLength(contour, closed=False) > min_edge_length:
-            # only return edges that are horizontal (angle less than 10 degrees)
+            # Ensure edges are nearly horizontal (angle < 10 degrees)
             [vx, vy, x, y] = cv2.fitLine(contour, cv2.DIST_L2, 0, 0.01, 0.01)
             angle = np.arctan2(vy, vx) * (180 / np.pi)
             if abs(angle) < 10:
-                horizontal_edges.append(contour)
+                horizontal_edges.append(1)
 
-    pano_detected = (len(horizontal_edges) > 1) and (diff_pixels > 1.3)
+    pano_detected = (len(horizontal_edges) > 3) and (diff_pixels > 0.3*10**(7))
 
     return pano_detected, edges
+
 
 # -----------------------------------------------------------------------------
 
 def checkPanoEdge(frame, prev_frame, lmask):
 
-    diff = cv2.absdiff(frame, prev_frame)
-    gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-    diff_pixels = np.count_nonzero(gray_diff>10)/(1080*1920)
+    # Compute absolute difference within the mask
+    if prev_frame is not None:
+        diff = cv2.absdiff(frame, prev_frame)
+    else:
+        diff = (np.zeros(np.shape(frame))).astype(np.uint8)
 
+    gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+    masked_diff = cv2.bitwise_and(gray_diff, gray_diff, mask=lmask)
+
+    # Count nonzero pixels within the mask
+    mask_size = np.count_nonzero(lmask)
+
+    diff_pixels = np.exp(20*(np.count_nonzero(masked_diff > 10) / mask_size))
+
+    # Detect horizontal edges within the mask
     edges = cv2.Canny(frame, threshold1=2, threshold2=400)
     edges = cv2.bitwise_and(edges, edges, mask=lmask)
 
@@ -59,13 +78,13 @@ def checkPanoEdge(frame, prev_frame, lmask):
 
     for contour in contours:
         if cv2.arcLength(contour, closed=False) > min_edge_length:
-            # only return edges that are horizontal (angle less than 10 degrees)
+            # Ensure edges are nearly horizontal (angle < 10 degrees)
             [vx, vy, x, y] = cv2.fitLine(contour, cv2.DIST_L2, 0, 0.01, 0.01)
             angle = np.arctan2(vy, vx) * (180 / np.pi)
             if abs(angle) < 10:
-                horizontal_edges.append(contour)
+                horizontal_edges.append(1)
 
-    pano_detected = (len(horizontal_edges) > 1) and (diff_pixels > 0.2)
+    pano_detected = (len(horizontal_edges) > 3) and (diff_pixels > 0.3*10**(7))
 
     return pano_detected, edges
 
@@ -78,8 +97,8 @@ if __name__ == "__main__":
     diff_pix_array = []
 
     w, h = 1920,1080
-    video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo158.mp4")
-    # video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/panoto70/Pano to 70 glitch.mp4")
+    video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo142.mp4")
+    #video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/panoto70/Pano to 70 glitch.mp4")
 
     if not video.isOpened():
         print("Error: Could not open video.")
@@ -113,9 +132,10 @@ if __name__ == "__main__":
         if panoState:
             print(f'Non Minimap Pano-70 Error Found at: {round(timeStamp, 4)} seconds')
 
-        prev_frame = frame  # Update previous frame AFTER processing the current frame
+        prev_frame = frame
 
     video.release()
 
     plt.plot(diff_pix_array)
     plt.title('Average difference per frame')
+
