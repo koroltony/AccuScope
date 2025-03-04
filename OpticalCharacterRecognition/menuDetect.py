@@ -2,6 +2,8 @@
 #returns a boolean if a menu exists inside.
 #The Fast Fourier Transform is used to speed up operations.
 
+
+#Returns True if there exists a Kernel that has a match of over 0.9 confidence.
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
