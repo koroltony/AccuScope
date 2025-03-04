@@ -45,7 +45,7 @@ def checkPanoEdge_test(frame, prev_frame, lmask, diff_pix_array, edge_array):
 
 from scipy.signal import correlate
 
-def analyze_autocorr(frame, auto_corr_array, use_edge_correlation=True):
+def analyze_autocorr(frame, pix_array, auto_corr_array, use_edge_correlation=False):
     # Try autocorrelation with and without edges
     if use_edge_correlation:
         edges = cv2.Canny(frame, threshold1=2, threshold2=200)
@@ -53,13 +53,17 @@ def analyze_autocorr(frame, auto_corr_array, use_edge_correlation=True):
     else:
         frame_to_correlate = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    center_col = frame_to_correlate[:, int(np.floor(frame_to_correlate.shape[1] // 1.5))]
+    center_col = frame_to_correlate[:, frame_to_correlate.shape[1] // 2]
     gray_col = center_col.flatten()
 
     # Normalized autocorrelation
-    gray_col_norm = gray_col / (max(gray_col)+0.000001)
+    # Step 1: Remove DC component (mean)
+    centered_gray_col = gray_col - np.mean(gray_col)
+
+    gray_col_norm = centered_gray_col/max(centered_gray_col)
+    pix_array.append(gray_col_norm)
     auto_corr = correlate(gray_col_norm, gray_col_norm, mode='full')
-    auto_corr = auto_corr / (max(auto_corr)+0.000001)
+    auto_corr = np.abs(auto_corr[0:len(auto_corr)//2])
     auto_corr_array.append(auto_corr)
 
 def plot_autocorr(auto_corr_array):
@@ -75,12 +79,19 @@ def plot_autocorr(auto_corr_array):
 
     plt.show()
 
-def plot_error_frame(frame,auto_corr, frame_idx, timeStamp):
+def plot_error_frame(frame,auto_corr,pix_array, frame_idx, timeStamp):
     plt.figure(figsize=(10, 4))
     plt.plot(auto_corr)
     plt.title(f'Autocorrelation for Frame {frame_idx} at {round(timeStamp, 2)}s')
-    plt.xlabel('Lag')
+    plt.xlabel('Position')
     plt.ylabel('Autocorrelation Magnitude')
+    plt.grid(True)
+
+    plt.figure(figsize=(10, 4))
+    plt.plot(pix_array)
+    plt.title(f'Pixel Array for Frame {frame_idx} at {round(timeStamp, 2)}s')
+    plt.xlabel('Pixel')
+    plt.ylabel('Pixel Magnitude')
     plt.grid(True)
 
     plt.figure(figsize=(10, 4))
@@ -137,6 +148,7 @@ if __name__ == "__main__":
     diff_pix_array = []
     edge_array = []
     auto_corr_array = []
+    pix_array = []
 
     video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo147.mp4")
 
@@ -177,21 +189,21 @@ if __name__ == "__main__":
         if not frameRead:
             break
 
-        analyze_autocorr(frame, auto_corr_array)
+        analyze_autocorr(frame,pix_array, auto_corr_array)
 
         panoState, edges = checkPanoEdge_test(frame, prev_frame, lmask, diff_pix_array, edge_array)
 
         if panoState:
             print(f'Pano-70 Error Found at: {round(timeStamp, 4)} seconds')
-            plot_error_frame(frame,auto_corr_array[-1], int(currentFrame), timeStamp)
+            plot_error_frame(frame,auto_corr_array[-1], pix_array[-1],int(currentFrame), timeStamp)
 
         # Plot for 5th frame (arbitrary) to compare:
 
         if currentFrame == 2415:
-            plot_error_frame(frame,auto_corr_array[-1], int(currentFrame), timeStamp)
+            plot_error_frame(frame,auto_corr_array[-1],pix_array[-1], int(currentFrame), timeStamp)
 
         if currentFrame == 500:
-            plot_error_frame(frame,auto_corr_array[-1], int(currentFrame), timeStamp)
+            plot_error_frame(frame,auto_corr_array[-1],pix_array[-1], int(currentFrame), timeStamp)
 
         prev_frame = frame
 
