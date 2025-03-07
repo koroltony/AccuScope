@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+#import time
 
 def hasMenu(frame, kernelsPath):
     greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -23,5 +24,9 @@ def hasMenu(frame, kernelsPath):
     menuThresholds = np.array(menuThresholds)
     return np.any(menuThresholds > 0.9)
 
+#start_time = time.time()
 #frame = cv2.imread('OpticalCharacterRecognition/testImages/frame2.jpg')
 #print(hasMenu(frame, 'OpticalCharacterRecognition/menuImages'))
+#end_time = time.time()
+#elapsed_time = end_time - start_time
+#print(f"Elapsed time: {elapsed_time} seconds")
