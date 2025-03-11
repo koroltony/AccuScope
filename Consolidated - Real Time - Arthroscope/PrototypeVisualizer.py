@@ -20,9 +20,14 @@ codeStart = time.time()
 frozen_frame_flags = []
 
 # Initialize video stream
+
+# OBS is 2s
+# Built in Camera is 1
+
 video = cv2.VideoCapture(2)
 
 # Set the MJPG codec
+
 video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
 
 # set the frame rate:
