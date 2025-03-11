@@ -63,7 +63,7 @@ def analyze_autocorr(frame, pix_array, auto_corr_array, use_edge_correlation=Fal
     gray_col_norm = centered_gray_col/max(centered_gray_col)
     pix_array.append(gray_col_norm)
     auto_corr = correlate(gray_col_norm, gray_col_norm, mode='full')
-    auto_corr = np.abs(auto_corr[0:len(auto_corr)//2])
+    auto_corr = np.log1p(np.abs(auto_corr[0:len(auto_corr)//2]))
     auto_corr_array.append(auto_corr)
 
 def plot_autocorr(auto_corr_array):
