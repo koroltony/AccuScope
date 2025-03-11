@@ -12,6 +12,7 @@ from source.highlights import checkHighlightsFrame
 from source.lagff15 import detect_frozen_frame
 from source.auto_mask import create_mask
 from source.panoto70fcn import checkPanoEdge
+from source.menuDetect import hasMenu
 
 error_video_path = 'intermediate_video.mp4'
 
@@ -39,6 +40,8 @@ if not video.isOpened():
 fps = int(video.get(cv2.CAP_PROP_FPS))
 frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+print(frame_width)
+print(frame_height)
 output_size = (2*frame_width, frame_height)
 
 # Create an output stream to hold the prototype video
@@ -219,21 +222,23 @@ while True:
     time_stamp = currentFrame/fps
 
     # Check Errors
+    #print(hasMenu(frame))
     green_state = checkGreenFrame(frame)
+    #print(frame.shape)
     if green_state == 1:
-        # Create error text and error frame variables to display later
+        # Create error text and error frame variables to qdisplay later
         error_text = f"Majority Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}"
         print(f"Majority Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_frame = frame.copy()
         error_counter = error_duration
-    elif green_state == 2:
+    elif green_state == 2 & ~hasMenu(frame):
         error_text = f"Partial Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}"
         error_frame = frame.copy()
         print(f"Partial Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_counter = error_duration
 
     magenta_state = checkMagentaFrame(frame)
-    if magenta_state == 1:
+    if magenta_state == 1 & ~hasMenu(frame):
         # Create error text and error frame variables to display later
         error_text = f"Magenta Screen Error at {time_stamp:.2f}s and frame: {currentFrame}"
         print(f"Magenta Screen Error at {time_stamp:.2f}s and frame: {currentFrame}")
@@ -277,17 +282,16 @@ while True:
 
         frozen_frame_buffer.pop(0)
 
-    # only check pano if we did not already detect a dropout (because pano flags dropout)
-    if black_state != 1:
-        pano_state_return = checkPanoEdge(frame,prev_frame,shrunk_mask)
-        pano_state = pano_state_return[0]
-        edge_frame = np.uint8(pano_state_return[1])
-        edge_frame = cv2.merge((edge_frame, edge_frame, edge_frame))
-        if pano_state == 1:
-            error_text = f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}"
-            print(f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}")
-            error_frame = frame.copy()
-            error_counter = error_duration
+    # Check pano
+    pano_state_return = checkPanoEdge(frame,prev_frame,shrunk_mask)
+    pano_state = pano_state_return[0]
+    edge_frame = np.uint8(pano_state_return[1])
+    edge_frame = cv2.merge((edge_frame, edge_frame, edge_frame))
+    if pano_state == 1 & ~hasMenu(frame):
+        error_text = f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}"
+        print(f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}")
+        error_frame = frame.copy()
+        error_counter = error_duration
 
     # Calculate where to put the text
     frame_height, frame_width = frame.shape[:2]
