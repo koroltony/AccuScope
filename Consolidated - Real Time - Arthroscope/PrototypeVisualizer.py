@@ -21,18 +21,26 @@ frozen_frame_flags = []
 
 # Initialize video stream
 
-# OBS is 2s
+# OBS is 2
 # Built in Camera is 1
 
 video = cv2.VideoCapture(2)
 
 # Set the MJPG codec
 
+#try AVC to see if it speeds things up:
+
+# video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'avc1'))
+
 video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
 
 # set the frame rate:
 
 video.set(cv2.CAP_PROP_FPS,60)
+
+ret, frame = video.read()
+if ret:
+    print("Processed Frame shape:", frame.shape)
 
 # Make sure it is not repeating frames
 
@@ -50,6 +58,7 @@ print(frame_height)
 output_size = (2*frame_width, frame_height)
 
 # Create an output stream to hold the prototype video
+
 out = cv2.VideoWriter(error_video_path, cv2.VideoWriter_fourcc(*'mp4v'), 60, output_size)
 
 # create mask for arthroscope footage based on first frame
@@ -186,7 +195,7 @@ next_index2 = max(video_indices2, default=0) + 1
 # Define the output video path with the new name
 output_video_path2 = os.path.join(output_folder2, f"Edge{next_index2}.mp4")
 
-savededge_vid = cv2.VideoWriter(output_video_path2, cv2.VideoWriter_fourcc(*'mp4v'), fps, [640,480])
+savededge_vid = cv2.VideoWriter(output_video_path2, cv2.VideoWriter_fourcc(*'mp4v'), fps, [frame_width,frame_height])
 
 
 
@@ -236,14 +245,14 @@ while True:
         print(f"Majority Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_frame = frame.copy()
         error_counter = error_duration
-    elif green_state == 2 & ~hasMenu(frame):
+    elif green_state == 2:
         error_text = f"Partial Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}"
         error_frame = frame.copy()
         print(f"Partial Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_counter = error_duration
 
     magenta_state = checkMagentaFrame(frame)
-    if magenta_state == 1 & ~hasMenu(frame):
+    if magenta_state == 1:
         # Create error text and error frame variables to display later
         error_text = f"Magenta Screen Error at {time_stamp:.2f}s and frame: {currentFrame}"
         print(f"Magenta Screen Error at {time_stamp:.2f}s and frame: {currentFrame}")
@@ -292,7 +301,7 @@ while True:
     pano_state = pano_state_return[0]
     edge_frame = np.uint8(pano_state_return[1])
     edge_frame = cv2.merge((edge_frame, edge_frame, edge_frame))
-    if pano_state == 1 & ~hasMenu(frame):
+    if pano_state == 1:
         error_text = f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}"
         print(f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_frame = frame.copy()

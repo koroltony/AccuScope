@@ -14,6 +14,7 @@ import time
 kernelPath = os.path.join(os.path.dirname(__file__), 'OpticalCharacterRecognition/menuImages')
 
 def hasMenu(frame, kernelsPath=kernelPath):
+
     greyFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     menuThresholds = []
     for filename in os.listdir(kernelsPath):
@@ -27,6 +28,7 @@ def hasMenu(frame, kernelsPath=kernelPath):
     #print(menuThresholds)
     menuThresholds = np.array(menuThresholds)
     return np.any(menuThresholds > 0.9)
+
 
 # start_time = time.time()
 # frame = cv2.imread('OpticalCharacterRecognition/testImages/frame2.jpg')
