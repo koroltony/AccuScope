@@ -28,10 +28,6 @@ video = cv2.VideoCapture(2)
 
 # Set the MJPG codec
 
-#try AVC to see if it speeds things up:
-
-# video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'avc1'))
-
 video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
 
 # set the frame rate:
@@ -42,7 +38,7 @@ ret, frame = video.read()
 if ret:
     print("Processed Frame shape:", frame.shape)
 
-# Make sure it is not repeating frames
+# Make sure the video reader is not repeating frames
 
 video.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
@@ -61,7 +57,11 @@ output_size = (2*frame_width, frame_height)
 
 out = cv2.VideoWriter(error_video_path, cv2.VideoWriter_fourcc(*'mp4v'), 60, output_size)
 
-# create mask for arthroscope footage based on first frame
+# TODO: Change to show masks at the same time instead of one after the other
+# Make it so that the pano to 70 mask follows the shape of l-mask for all valid regions
+# Allow the user to set both masks simultaneously after shrinking or growing
+
+# ------ create mask for arthroscope footage based on first frame -----------------------
 
 print('Press "k" to set mask for the footage')
 
@@ -145,6 +145,8 @@ while True:
         break
 
 cv2.destroyAllWindows()
+
+# ------------------------------------------------------------------------------------------------
 
 # Create variables for the error visualization
 prev_frame = None
@@ -238,7 +240,7 @@ while True:
     # Check Errors
     #print(hasMenu(frame))
     green_state = checkGreenFrame(frame)
-    #print(frame.shape)
+    #print(frame.shape)q
     if green_state == 1:
         # Create error text and error frame variables to qdisplay later
         error_text = f"Majority Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}"
@@ -268,7 +270,7 @@ while True:
         error_counter = error_duration
 
     # if checkHighlightsFrame(frame,lmask):
-    #     error_text = f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}"
+    #     error_text = f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}"q
     #     print(f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}")
     #     error_frame = frame.copy()
     #     error_counter = error_duration
@@ -289,7 +291,7 @@ while True:
     if len(frozen_frame_buffer) >= window_size:
         #print(f"Window sum: {sum(frozen_frame_buffer)}")
         if sum(frozen_frame_buffer) > 4:
-            print(f"Frozen Frame Error Detected (More than 4 in the last {window_size} frames)")
+            print(f"Frozen Frame Error Detected at {time_stamp:.2f}s (More than 4 in the last {window_size} frames)")
             error_text = f"Frozen Frame Error at {time_stamp:.2f}s and frame: {currentFrame}"
             error_frame = frame.copy()
             error_counter = error_duration
