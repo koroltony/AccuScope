@@ -151,7 +151,7 @@ if __name__ == "__main__":
     auto_corr_array = []
     pix_array = []
 
-    video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo192.mp4")
+    video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/source/Magenta480p.mp4")
     if not video.isOpened():
         print("Error: Could not open video.")
         exit()

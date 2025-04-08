@@ -57,91 +57,95 @@ output_size = (2*frame_width, frame_height)
 
 out = cv2.VideoWriter(error_video_path, cv2.VideoWriter_fourcc(*'mp4v'), 60, output_size)
 
-# TODO: Change to show masks at the same time instead of one after the other
-# Make it so that the pano to 70 mask follows the shape of l-mask for all valid regions
-# Allow the user to set both masks simultaneously after shrinking or growing
+# ---------------- Create masks for video stream ------------------------------
 
-# ------ create mask for arthroscope footage based on first frame -----------------------
+print('shrink/grow pano-to-70 mask until no "camera-induced" outer edges are visible using "s" and "g"')
+print('Press "k" to set both masks when ready')
 
-print('Press "k" to set mask for the footage')
-
-while True:
-    _, initial_frame = video.read()
-    lmask = create_mask(initial_frame)
-    cv2.imshow('Footage Mask',lmask)
-
-    # Wait for a key press for 1ms and check if 'k' is pressed
-    key = cv2.waitKey(1) & 0xFF
-    if key == ord('k'):
-        print("Mask Set")
-        break
-
-    if keyboard.is_pressed('k'):
-        print("Mask Set")
-        break
-
-cv2.destroyAllWindows()
-
-# Create mask for pano to 70
-
-shrunk_mask = lmask
+# shrink and grow variables:
 keypress = False
 keypresg = False
+shrunk_mode = False
+# Keep track of frames to update every 10 frames
+frame_counter = 0
+# update red edges every 10 frames (to reduce latency)
+update_interval = 10
 
-print("Shrink/grow mask until you don't see any edges")
-print('press "s" to shrink the mask')
-print('press "g" to grow mask')
-print('press "d" to begin processing')
+# Initial frame read to initialize masks
+_, curr_frame = video.read()
+
+# Create kernel for shrinking pano to 70 mask
+kernel = np.ones((3, 3), np.uint8)
+
+# Initialize lmask and initial pano mask before shrink operation
+lmask = create_mask(curr_frame).astype(np.uint8)
+shrunk_mask = lmask.copy()
+
+# Initialize pano to 70 mask
+pano_overlay = np.zeros_like(curr_frame)
 
 while True:
-
-    # Detect edges using Canny edge filter
-    # Thresholds are intentionally high to make only strong edges appear
-
-    edges = cv2.Canny(initial_frame, threshold1=100, threshold2=200)
-
-    # Shrink the mask inward by a few pixels because the edge of the mask gets in the way
-
-    kernel = np.ones((3, 3), np.uint8)
-
-    if keypress and not keyboard.is_pressed('s'):
-        print("Pano-to-70 Mask Shrunk")
-        shrunk_mask = cv2.erode(shrunk_mask, kernel, iterations=1)
-        keypress = False
-
-    elif keyboard.is_pressed('s') and not keypress:
-        keypress = True
-
-    if keypresg and not keyboard.is_pressed('g'):
-        print("Pano-to-70 Mask Grown")
-        shrunk_mask = cv2.dilate(shrunk_mask, kernel, iterations=1)
-        keypresg = False
-
-    elif keyboard.is_pressed('g') and not keypress:
-        keypresg = True
-
-    edges = cv2.bitwise_and(edges, edges, mask=shrunk_mask)
-
-    # Make edges red
-    edges_red = cv2.merge([np.zeros_like(edges), np.zeros_like(edges), edges])
-
-    # Make mask background green
-    mask_green = cv2.merge([np.zeros_like(shrunk_mask), shrunk_mask, np.zeros_like(shrunk_mask)])
-    mask_green = (mask_green * 0.3).astype(np.uint8)
-
-    # Overlay edges onto the mask
-    overlay = cv2.addWeighted(mask_green, 0.5, edges_red, 1, 0)
-
-    cv2.imshow('Pano-70 Mask',overlay)
-
-    # Wait for a key press for 1ms and check if 'k' is pressed
-    key = cv2.waitKey(1) & 0xFF
-    if key == ord('d'):
-        print("Pano-70 Mask Set")
+    ret, curr_frame = video.read()
+    if not ret:
+        print("Failed to read frame.")
         break
 
-    if keyboard.is_pressed('d'):
-        print("Pano-70 Mask Set")
+    # Update lmask until 'k' every 10 frames to avoid bad lag
+    if not keyboard.is_pressed('k'):
+        if frame_counter % update_interval == 0 or frame_counter == 1:
+            lmask = create_mask(curr_frame).astype(np.uint8)
+
+        # Shrunk_mask follows lmask until first shrink/grow operation
+        if not shrunk_mode:
+            shrunk_mask = lmask.copy()
+
+    # shrink the pano to 70 mask every time 's' is clicked
+    if keyboard.is_pressed('s') and not keypress:
+        keypress = True
+    if keypress and not keyboard.is_pressed('s'):
+        shrunk_mask = cv2.erode(shrunk_mask, kernel, iterations=3)
+        shrunk_mode = True
+        keypress = False
+
+    # grow the pano to 70 mask every time 'g' is clicked
+    if keyboard.is_pressed('g') and not keypresg:
+        keypresg = True
+    if keypresg and not keyboard.is_pressed('g'):
+        shrunk_mask = cv2.dilate(shrunk_mask, kernel, iterations=3)
+        shrunk_mode = True
+        keypresg = False
+
+    # Update edges in pano mask every 10 frames
+    if frame_counter % update_interval == 0:
+        # Create edges in red that are eventually placed on top of the pano mask
+        edges = cv2.Canny(curr_frame, 100, 200)
+        masked_edges = cv2.bitwise_and(edges, edges, mask=shrunk_mask)
+        edges_red = cv2.merge([
+            np.zeros_like(edges),
+            np.zeros_like(edges),
+            masked_edges
+        ])
+
+    # update pano to 70 mask to show the latest size
+    pano_green = cv2.merge([
+        np.zeros_like(shrunk_mask),
+        shrunk_mask,
+        np.zeros_like(shrunk_mask)
+    ])
+    
+    # put the red edges on top of the green pano mask
+    pano_green = (pano_green * 0.3).astype(np.uint8)
+    pano_overlay = cv2.addWeighted(pano_green, 0.5, edges_red, 1.0, 0)
+
+    # Show both masks
+    cv2.imshow("Footage Mask", lmask)
+    cv2.imshow("Pano-70 Mask", pano_overlay)
+
+    frame_counter += 1
+
+    # Exit when 'k' is clicked
+    if cv2.waitKey(1) & 0xFF == ord('k') or keyboard.is_pressed('k'):
+        print("Both masks set.")
         break
 
 cv2.destroyAllWindows()
