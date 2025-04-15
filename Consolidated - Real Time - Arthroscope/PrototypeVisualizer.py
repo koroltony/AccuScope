@@ -165,11 +165,14 @@ while True:
 
 cv2.destroyAllWindows()
 
+<<<<<<< HEAD
 # Compile JIT-enabled codes before starting
 _ = checkBlackFrame(curr_frame, lmask)
 _ = checkGreenFrame(curr_frame)
 _ = checkMagentaFrame(curr_frame)
 
+=======
+>>>>>>> 4345aec5169143d78aefd0e635f8664153342ff2
 # ------------------------------------------------------------------------------------------------
 
 # Create variables for the error visualization
@@ -264,7 +267,7 @@ while True:
     # Check Errors
     #print(hasMenu(frame))
     green_state = checkGreenFrame(frame)
-    #print(frame.shape)
+    #print(frame.shape)q
     if green_state == 1:
         # Create error text and error frame variables to qdisplay later
         error_text = f"Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}"
