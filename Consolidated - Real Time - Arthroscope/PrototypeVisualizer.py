@@ -165,14 +165,13 @@ while True:
 
 cv2.destroyAllWindows()
 
-<<<<<<< HEAD
+
 # Compile JIT-enabled codes before starting
 _ = checkBlackFrame(curr_frame, lmask)
 _ = checkGreenFrame(curr_frame)
 _ = checkMagentaFrame(curr_frame)
 
-=======
->>>>>>> 4345aec5169143d78aefd0e635f8664153342ff2
+
 # ------------------------------------------------------------------------------------------------
 
 # Create variables for the error visualization
