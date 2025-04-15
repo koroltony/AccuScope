@@ -8,10 +8,11 @@ import matplotlib.pyplot as plt
 from source.greenVectorizedSolution import checkGreenFrame
 from source.magentaScreen import checkMagentaFrame
 from source.dropoutScreen import checkBlackFrame
-from source.highlights import checkHighlightsFrameq
+from source.highlights import checkHighlightsFrame
 from source.lagff15 import detect_frozen_frame
 from source.auto_mask import create_mask
 from source.panoto70fcn import checkPanoEdge
+from source.menuDetect import hasMenu
 
 error_video_path = 'intermediate_video.mp4'
 
@@ -19,16 +20,25 @@ codeStart = time.time()
 frozen_frame_flags = []
 
 # Initialize video stream
+
+# OBS is 2
+# Built in Camera is 1
+
 video = cv2.VideoCapture(2)
 
 # Set the MJPG codec
+
 video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
 
 # set the frame rate:
 
 video.set(cv2.CAP_PROP_FPS,60)
 
-# Make sure it is not repeating frames
+ret, frame = video.read()
+if ret:
+    print("Processed Frame shape:", frame.shape)
+
+# Make sure the video reader is not repeating frames
 
 video.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
@@ -39,95 +49,108 @@ if not video.isOpened():
 fps = int(video.get(cv2.CAP_PROP_FPS))
 frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+print(frame_width)
+print(frame_height)
 output_size = (2*frame_width, frame_height)
 
 # Create an output stream to hold the prototype video
+
 out = cv2.VideoWriter(error_video_path, cv2.VideoWriter_fourcc(*'mp4v'), 60, output_size)
 
-# create mask for arthroscope footage based on first frame
+# ---------------- Create masks for video stream ------------------------------
 
-print('Press "k" to set mask for the footage')
+print('shrink/grow pano-to-70 mask until no "camera-induced" outer edges are visible using "s" and "g"')
+print('Press "k" to set both masks when ready')
 
-while True:
-    _, initial_frame = video.read()
-    lmask = create_mask(initial_frame)
-    cv2.imshow('Footage Mask',lmask)
-
-    # Wait for a key press for 1ms and check if 'k' is pressed
-    key = cv2.waitKey(1) & 0xFF
-    if key == ord('k'):
-        print("Mask Set")
-        break
-
-    if keyboard.is_pressed('k'):
-        print("Mask Set")
-        break
-
-cv2.destroyAllWindows()
-
-# Create mask for pano to 70
-
-shrunk_mask = lmask
+# shrink and grow variables:
 keypress = False
 keypresg = False
+shrunk_mode = False
+# Keep track of frames to update every 10 frames
+frame_counter = 0
+# update red edges every 10 frames (to reduce latency)
+update_interval = 10
 
-print("Shrink/grow mask until you don't see any edges")
-print('press "s" to shrink the mask')
-print('press "g" to grow mask')
-print('press "d" to begin processing')
+# Initial frame read to initialize masks
+_, curr_frame = video.read()
+
+# Create kernel for shrinking pano to 70 mask
+kernel = np.ones((3, 3), np.uint8)
+
+# Initialize lmask and initial pano mask before shrink operation
+lmask = create_mask(curr_frame).astype(np.uint8)
+shrunk_mask = lmask.copy()
+
+# Initialize pano to 70 mask
+pano_overlay = np.zeros_like(curr_frame)
 
 while True:
-
-    # Detect edges using Canny edge filter
-    # Thresholds are intentionally high to make only strong edges appear
-
-    edges = cv2.Canny(initial_frame, threshold1=100, threshold2=200)
-
-    # Shrink the mask inward by a few pixels because the edge of the mask gets in the way
-
-    kernel = np.ones((3, 3), np.uint8)
-
-    if keypress and not keyboard.is_pressed('s'):
-        print("Pano-to-70 Mask Shrunk")
-        shrunk_mask = cv2.erode(shrunk_mask, kernel, iterations=1)
-        keypress = False
-
-    elif keyboard.is_pressed('s') and not keypress:
-        keypress = True
-
-    if keypresg and not keyboard.is_pressed('g'):
-        print("Pano-to-70 Mask Grown")
-        shrunk_mask = cv2.dilate(shrunk_mask, kernel, iterations=1)
-        keypresg = False
-
-    elif keyboard.is_pressed('g') and not keypress:
-        keypresg = True
-
-    edges = cv2.bitwise_and(edges, edges, mask=shrunk_mask)
-
-    # Make edges red
-    edges_red = cv2.merge([np.zeros_like(edges), np.zeros_like(edges), edges])
-
-    # Make mask background green
-    mask_green = cv2.merge([np.zeros_like(shrunk_mask), shrunk_mask, np.zeros_like(shrunk_mask)])
-    mask_green = (mask_green * 0.3).astype(np.uint8)
-
-    # Overlay edges onto the mask
-    overlay = cv2.addWeighted(mask_green, 0.5, edges_red, 1, 0)
-
-    cv2.imshow('Pano-70 Mask',overlay)
-
-    # Wait for a key press for 1ms and check if 'k' is pressed
-    key = cv2.waitKey(1) & 0xFF
-    if key == ord('d'):
-        print("Pano-70 Mask Set")
+    ret, curr_frame = video.read()
+    if not ret:
+        print("Failed to read frame.")
         break
 
-    if keyboard.is_pressed('d'):
-        print("Pano-70 Mask Set")
+    # Update lmask until 'k' every 10 frames to avoid bad lag
+    if not keyboard.is_pressed('k'):
+        if frame_counter % update_interval == 0 or frame_counter == 1:
+            lmask = create_mask(curr_frame).astype(np.uint8)
+
+        # Shrunk_mask follows lmask until first shrink/grow operation
+        if not shrunk_mode:
+            shrunk_mask = lmask.copy()
+
+    # shrink the pano to 70 mask every time 's' is clicked
+    if keyboard.is_pressed('s') and not keypress:
+        keypress = True
+    if keypress and not keyboard.is_pressed('s'):
+        shrunk_mask = cv2.erode(shrunk_mask, kernel, iterations=3)
+        shrunk_mode = True
+        keypress = False
+
+    # grow the pano to 70 mask every time 'g' is clicked
+    if keyboard.is_pressed('g') and not keypresg:
+        keypresg = True
+    if keypresg and not keyboard.is_pressed('g'):
+        shrunk_mask = cv2.dilate(shrunk_mask, kernel, iterations=3)
+        shrunk_mode = True
+        keypresg = False
+
+    # Update edges in pano mask every 10 frames
+    if frame_counter % update_interval == 0:
+        # Create edges in red that are eventually placed on top of the pano mask
+        edges = cv2.Canny(curr_frame, 100, 200)
+        masked_edges = cv2.bitwise_and(edges, edges, mask=shrunk_mask)
+        edges_red = cv2.merge([
+            np.zeros_like(edges),
+            np.zeros_like(edges),
+            masked_edges
+        ])
+
+    # update pano to 70 mask to show the latest size
+    pano_green = cv2.merge([
+        np.zeros_like(shrunk_mask),
+        shrunk_mask,
+        np.zeros_like(shrunk_mask)
+    ])
+    
+    # put the red edges on top of the green pano mask
+    pano_green = (pano_green * 0.3).astype(np.uint8)
+    pano_overlay = cv2.addWeighted(pano_green, 0.5, edges_red, 1.0, 0)
+
+    # Show both masks
+    cv2.imshow("Footage Mask", lmask)
+    cv2.imshow("Pano-70 Mask", pano_overlay)
+
+    frame_counter += 1
+
+    # Exit when 'k' is clicked
+    if cv2.waitKey(1) & 0xFF == ord('k') or keyboard.is_pressed('k'):
+        print("Both masks set.")
         break
 
 cv2.destroyAllWindows()
+
+# ------------------------------------------------------------------------------------------------
 
 # Create variables for the error visualization
 prev_frame = None
@@ -178,7 +201,7 @@ next_index2 = max(video_indices2, default=0) + 1
 # Define the output video path with the new name
 output_video_path2 = os.path.join(output_folder2, f"Edge{next_index2}.mp4")
 
-savededge_vid = cv2.VideoWriter(output_video_path2, cv2.VideoWriter_fourcc(*'mp4v'), fps, [640,480])
+savededge_vid = cv2.VideoWriter(output_video_path2, cv2.VideoWriter_fourcc(*'mp4v'), fps, [frame_width,frame_height])
 
 
 
@@ -219,9 +242,11 @@ while True:
     time_stamp = currentFrame/fps
 
     # Check Errors
+    #print(hasMenu(frame))
     green_state = checkGreenFrame(frame)
+    #print(frame.shape)q
     if green_state == 1:
-        # Create error text and error frame variables to display later
+        # Create error text and error frame variables to qdisplay later
         error_text = f"Majority Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}"
         print(f"Majority Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_frame = frame.copy()
@@ -249,7 +274,7 @@ while True:
         error_counter = error_duration
 
     # if checkHighlightsFrame(frame,lmask):
-    #     error_text = f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}"
+    #     error_text = f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}"q
     #     print(f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}")
     #     error_frame = frame.copy()
     #     error_counter = error_duration
@@ -270,24 +295,23 @@ while True:
     if len(frozen_frame_buffer) >= window_size:
         #print(f"Window sum: {sum(frozen_frame_buffer)}")
         if sum(frozen_frame_buffer) > 4:
-            print(f"Frozen Frame Error Detected (More than 4 in the last {window_size} frames)")
+            print(f"Frozen Frame Error Detected at {time_stamp:.2f}s (More than 4 in the last {window_size} frames)")
             error_text = f"Frozen Frame Error at {time_stamp:.2f}s and frame: {currentFrame}"
             error_frame = frame.copy()
             error_counter = error_duration
 
         frozen_frame_buffer.pop(0)
 
-    # only check pano if we did not already detect a dropout (because pano flags dropout)
-    if black_state != 1:
-        pano_state_return = checkPanoEdge(frame,prev_frame,shrunk_mask)
-        pano_state = pano_state_return[0]
-        edge_frame = np.uint8(pano_state_return[1])
-        edge_frame = cv2.merge((edge_frame, edge_frame, edge_frame))
-        if pano_state == 1:
-            error_text = f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}"
-            print(f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}")
-            error_frame = frame.copy()
-            error_counter = error_duration
+    # Check pano
+    pano_state_return = checkPanoEdge(frame,prev_frame,shrunk_mask)
+    pano_state = pano_state_return[0]
+    edge_frame = np.uint8(pano_state_return[1])
+    edge_frame = cv2.merge((edge_frame, edge_frame, edge_frame))
+    if pano_state == 1:
+        error_text = f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}"
+        print(f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}")
+        error_frame = frame.copy()
+        error_counter = error_duration
 
     # Calculate where to put the text
     frame_height, frame_width = frame.shape[:2]

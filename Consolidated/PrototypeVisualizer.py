@@ -11,6 +11,7 @@ from source.highlights import checkHighlightsFrame
 from source.lagff15 import detect_frozen_frame
 from source.auto_mask import create_mask
 from source.panoto70fcn import checkPanoEdge
+from source.menuDetect import hasMenu
 
 # Get video path:
 
