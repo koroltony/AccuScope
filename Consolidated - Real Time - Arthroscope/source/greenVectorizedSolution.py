@@ -2,6 +2,7 @@ import cv2
 import os
 import time
 import numpy as np
+from numba import njit
 
 start_time = time.time()
 
@@ -20,3 +21,14 @@ def checkGreenFrame(frame):
 
     else:
         return 0
+    
+@njit
+def checkGreenFrame_numba(frame):
+    for i in range(frame.shape[0]):
+        for j in range(frame.shape[1]):
+            r = frame[i, j, 2]
+            g = frame[i, j, 1]
+            b = frame[i, j, 0]
+            if r < 10 and g > 90 and b < 10:
+                return 1
+    return 0

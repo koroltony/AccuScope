@@ -13,6 +13,56 @@ sys.path.append(helper_scripts_dir)
 repeated_region_array = []
 
 # ----------------------------------------------------------------------------------------
+# Final repeated region detection script for use in pano-to-70 detection
+
+def repeated_region(frame):
+    
+    # # Tried doing autocorrelation on the canny-filtered frame (Very poor results)
+    # if use_edge_correlation:
+    #     img = cv2.Canny(frame, threshold1=2, threshold2=200)
+    # else:
+    img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # Extract the center 10 columns of pixels
+
+    height, width = img.shape
+    center = width // 2
+    region_width = 10
+    start_col = max(center - region_width // 2, 0)
+    end_col = min(center + region_width // 2, width)
+
+    # Average over the columns (also from 20:400 to remove irrelevant end pieces)
+    region_avg = np.mean(img[20:400, start_col:end_col], axis=1)
+
+    # Normalize by the standard deviation (makes smaller fluctuations more visible)
+    mean_val = np.mean(region_avg)
+    std_val = np.std(region_avg)
+    if std_val == 0:
+        std_val = 1
+    norm_region = (region_avg - mean_val) / std_val
+
+    # Compute Autocorrelation with the normalized column
+    autocorr_full = correlate(norm_region, norm_region, mode='full')
+    autocorr = autocorr_full[len(autocorr_full) // 2:]
+    if np.max(autocorr) != 0:
+        autocorr = autocorr / np.max(autocorr)
+
+    # Look at the autocorrelation in the log domain, so that it is interpretable
+    autocorr_log = np.log1p(np.abs(autocorr))
+
+    # Detect peaks in the autocorrelation signal
+    peaks, properties = find_peaks(autocorr_log, prominence=0.3)
+    # There is repetition if we see more than 3 peaks
+    repeated_detected = (len(peaks) >= 3)
+    
+    if repeated_detected:
+        return 1
+    else:
+        return 0
+
+# ----------------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------------
 def checkPanoEdge_test(frame, prev_frame, lmask, edge_array):
 
     # Equalize the frame before doing edge detection (Normalizes for brightness)
@@ -40,13 +90,13 @@ def checkPanoEdge_test(frame, prev_frame, lmask, edge_array):
 # ----------------------------------------------------------------------------------------
 # Apply Autocorrelation to check for pano-to-70 repeated pixels
 
-def analyze_autocorr(frame, pix_array, auto_corr_array, use_edge_correlation=False):
+def analyze_autocorr_test(frame, pix_array, auto_corr_array):
     
-    # Tried doing autocorrelation on the canny-filtered frame (Very poor results)
-    if use_edge_correlation:
-        img = cv2.Canny(frame, threshold1=2, threshold2=200)
-    else:
-        img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    # # Tried doing autocorrelation on the canny-filtered frame (Very poor results)
+    # if use_edge_correlation:
+    #     img = cv2.Canny(frame, threshold1=2, threshold2=200)
+    # else:
+    img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Extract the center 10 columns of pixels
 
@@ -151,7 +201,7 @@ if __name__ == "__main__":
     auto_corr_array = []
     pix_array = []
 
-    video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo192.mp4")
+    video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/source/Magenta480p.mp4")
     if not video.isOpened():
         print("Error: Could not open video.")
         exit()
@@ -186,7 +236,7 @@ if __name__ == "__main__":
             break
 
         # Improved autocorrelation analysis using the updated function.
-        analyze_autocorr(frame, pix_array, auto_corr_array)
+        analyze_autocorr_test(frame, pix_array, auto_corr_array)
 
         # Edge-based detection as before.
         panoState_edge, edges = checkPanoEdge_test(frame, prev_frame, lmask, edge_array)

@@ -11,12 +11,12 @@ from source.highlights import checkHighlightsFrame
 from source.lagff15 import detect_frozen_frame
 from source.auto_mask import create_mask
 from source.panoto70fcn import checkPanoEdge
-from source.menuDetect import hasMenu
+#from source.menuDetect import hasMenu
 
 # Get video path:
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-video_path = os.path.join(current_dir, "source", "savedVideo7.mp4")
+video_path = os.path.join(current_dir, "source", "realMagenta.mp4")
 
 
 codeStart = time.time()

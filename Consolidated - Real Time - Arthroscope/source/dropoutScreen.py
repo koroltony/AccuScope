@@ -2,6 +2,7 @@ import cv2
 import os
 import time
 import numpy as np
+from numba import njit
 
 start_time = time.time()
 
@@ -18,3 +19,17 @@ def checkBlackFrame(frame,mask):
 
     else:
         return 0
+    
+@njit
+def checkBlackFrame_numba(frame, mask):
+    height, width = frame.shape[:2]
+    for i in range(height):
+        for j in range(width):
+            if mask[i, j] > 0:
+                r = frame[i, j, 2]
+                g = frame[i, j, 1]
+                b = frame[i, j, 0]
+                if r > 20 and g > 20 and b > 20:
+                    return 0
+    return 1
+    
