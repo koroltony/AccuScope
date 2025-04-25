@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import subprocess
 import sys
 from scipy.signal import correlate, find_peaks
+from numba import njit
+import time
 
 repo_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel']).strip().decode()
 helper_scripts_dir = os.path.join(repo_root, 'Helper Scripts')
@@ -17,10 +19,6 @@ repeated_region_array = []
 
 def repeated_region(frame):
     
-    # # Tried doing autocorrelation on the canny-filtered frame (Very poor results)
-    # if use_edge_correlation:
-    #     img = cv2.Canny(frame, threshold1=2, threshold2=200)
-    # else:
     img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Extract the center 10 columns of pixels
@@ -32,9 +30,11 @@ def repeated_region(frame):
     end_col = min(center + region_width // 2, width)
 
     # Average over the columns (also from 20:400 to remove irrelevant end pieces)
+    
     region_avg = np.mean(img[20:400, start_col:end_col], axis=1)
 
     # Normalize by the standard deviation (makes smaller fluctuations more visible)
+    
     mean_val = np.mean(region_avg)
     std_val = np.std(region_avg)
     if std_val == 0:
@@ -42,7 +42,7 @@ def repeated_region(frame):
     norm_region = (region_avg - mean_val) / std_val
 
     # Compute Autocorrelation with the normalized column
-    autocorr_full = correlate(norm_region, norm_region, mode='full')
+    autocorr_full = correlate(norm_region, norm_region, mode='full',method='fft')
     autocorr = autocorr_full[len(autocorr_full) // 2:]
     if np.max(autocorr) != 0:
         autocorr = autocorr / np.max(autocorr)
@@ -51,7 +51,7 @@ def repeated_region(frame):
     autocorr_log = np.log1p(np.abs(autocorr))
 
     # Detect peaks in the autocorrelation signal
-    peaks, properties = find_peaks(autocorr_log, prominence=0.3)
+    peaks,_ = find_peaks(autocorr_log, prominence=0.3)
     # There is repetition if we see more than 3 peaks
     repeated_detected = (len(peaks) >= 3)
     
@@ -61,6 +61,99 @@ def repeated_region(frame):
         return 0
 
 # ----------------------------------------------------------------------------------------
+
+def find_peaks_numpy(signal, prominence=0.3):
+    peaks = []
+    for i in range(1, len(signal) - 1):
+        if signal[i] > signal[i - 1] and signal[i] > signal[i + 1]:
+            # Look left
+            left_min = signal[i]
+            for j in range(i - 1, -1, -1):
+                if signal[j] > signal[i]:
+                    break
+                left_min = min(left_min, signal[j])
+            # Look right
+            right_min = signal[i]
+            for j in range(i + 1, len(signal)):
+                if signal[j] > signal[i]:
+                    break
+                right_min = min(right_min, signal[j])
+            # Prominence check
+            if signal[i] - max(left_min, right_min) >= prominence:
+                peaks.append(i)
+    return np.array(peaks)
+
+# NumPy version
+def repeated_region_numpy(frame):
+    img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    center = img.shape[1] // 2
+    region_avg = np.mean(img[20:400, center - 5:center + 5], axis=1)
+    norm = (region_avg - np.mean(region_avg)) / (np.std(region_avg) or 1)
+    autocorr = np.correlate(norm, norm, mode='full')[len(norm)-1:]
+    autocorr /= np.max(autocorr) or 1
+    autocorr_log = np.log1p(np.abs(autocorr))
+    # Compare surrounding values to identify peaks in autocorrelation spectrum
+    peaks = find_peaks_numpy(autocorr_log, prominence=0.3)
+    return int(len(peaks) >= 3)
+
+def repeated_region_scipy(frame):
+    img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    center = img.shape[1] // 2
+    region_avg = np.mean(img[20:400, center - 5:center + 5], axis=1)
+    norm = (region_avg - np.mean(region_avg)) / (np.std(region_avg) or 1)
+    autocorr = correlate(norm, norm, mode='full',method='fft')[len(norm)-1:]
+    autocorr /= np.max(autocorr) or 1
+    autocorr_log = np.log1p(np.abs(autocorr))
+    peaks,_ = find_peaks(autocorr_log, prominence=0.3)
+    return int(len(peaks) >= 3)
+
+# Numba autocorrelation + peak detection
+@njit
+def autocorr_and_log(vec):
+    n = vec.shape[0]
+    mean_val = np.mean(vec)
+    std_val = np.std(vec) or 1.0
+    norm_vec = (vec - mean_val) / std_val
+    autocorr = np.zeros(n)
+    for lag in range(n):
+        for i in range(n - lag):
+            autocorr[lag] += norm_vec[i] * norm_vec[i + lag]
+    maxval = np.max(autocorr)
+    if maxval > 0:
+        autocorr /= maxval
+    for i in range(n):
+        autocorr[i] = np.log1p(np.abs(autocorr[i]))
+    return autocorr
+
+@njit
+def find_peaks_numba(signal, prominence=0.3):
+    peaks = []
+    for i in range(1, len(signal) - 1):
+        if signal[i] > signal[i - 1] and signal[i] > signal[i + 1]:
+            # Look left
+            left_min = signal[i]
+            for j in range(i - 1, -1, -1):
+                if signal[j] > signal[i]:
+                    break
+                left_min = min(left_min, signal[j])
+            # Look right
+            right_min = signal[i]
+            for j in range(i + 1, len(signal)):
+                if signal[j] > signal[i]:
+                    break
+                right_min = min(right_min, signal[j])
+            # Prominence check
+            if signal[i] - max(left_min, right_min) >= prominence:
+                peaks.append(i)
+    return np.array(peaks)
+
+def repeated_region_numba(frame):
+    img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    center = img.shape[1] // 2
+    region_avg = np.mean(img[20:400, center - 5:center + 5], axis=1).astype(np.float32)
+    autocorr_log = autocorr_and_log(region_avg)
+    peaks = find_peaks_numba(autocorr_log)
+    return int(len(peaks) >= 3)
 
 # ----------------------------------------------------------------------------------------
 def checkPanoEdge_test(frame, prev_frame, lmask, edge_array):
@@ -132,6 +225,7 @@ def analyze_autocorr_test(frame, pix_array, auto_corr_array):
     # There is repetition if we see more than 3 peaks
     repeated_detected = (len(peaks) >= 3)
     repeated_region_array.append(repeated_detected)
+    
 
 # ----------------------------------------------------------------------------------------
 def plot_autocorr(auto_corr_array):
@@ -194,14 +288,16 @@ def checkPanoEdge(frame, prev_frame, lmask):
     return pano_detected, edges
 
 # ----------------------------------------------------------------------------------------
+    
 if __name__ == "__main__":
+    
     from auto_mask import create_mask
 
     edge_array = []
     auto_corr_array = []
     pix_array = []
 
-    video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/source/Magenta480p.mp4")
+    video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo194.mp4")
     if not video.isOpened():
         print("Error: Could not open video.")
         exit()
@@ -219,14 +315,16 @@ if __name__ == "__main__":
     for _ in range(20):
         lmask = cv2.erode(lmask, kernel)
 
-    overlayed_frame = prev_frame.copy()
-    overlayed_frame[lmask > 0] = cv2.add(overlayed_frame[lmask > 0], (255, 255, 255, 0))
-    overlayed_frame = cv2.cvtColor(overlayed_frame, cv2.COLOR_BGR2RGB)
-    plt.figure()
-    plt.imshow(overlayed_frame)
-    plt.title('First Frame with Mask Overlay')
-    plt.axis('off')
-
+    # overlayed_frame = prev_frame.copy()
+    # overlayed_frame[lmask > 0] = cv2.add(overlayed_frame[lmask > 0], (255, 255, 255, 0))
+    # overlayed_frame = cv2.cvtColor(overlayed_frame, cv2.COLOR_BGR2RGB)
+    # plt.figure()
+    # plt.imshow(overlayed_frame)
+    # plt.title('First Frame with Mask Overlay')
+    # plt.axis('off')
+    
+    start = time.perf_counter()
+    
     while video.isOpened():
         currentFrame = video.get(cv2.CAP_PROP_POS_FRAMES)
         timeStamp = currentFrame / fps
@@ -235,32 +333,88 @@ if __name__ == "__main__":
         if not frameRead:
             break
 
-        # Improved autocorrelation analysis using the updated function.
-        analyze_autocorr_test(frame, pix_array, auto_corr_array)
+        # Test Pano-to-70 method:
+        detected_error = repeated_region_numba(frame)
 
-        # Edge-based detection as before.
-        panoState_edge, edges = checkPanoEdge_test(frame, prev_frame, lmask, edge_array)
-
-        # Combine detection metrics:
-        # Use either the edge detection flag or the autocorrelation repeated-region flag.
-        if panoState_edge or repeated_region_array[-1]:
-            print(f"Pano-to-70 error at: {round(timeStamp, 4)} seconds (Frame {int(currentFrame)}) Edge: {panoState_edge} Repeated Region: {repeated_region_array[-1]}")
-            plot_error_frame(frame, auto_corr_array[-1], pix_array[-1], int(currentFrame), timeStamp)
-
-        # # plot detailed analysis for random frame.
-        # if currentFrame in range(410,430):
-        #      plot_error_frame(frame, auto_corr_array[-1], pix_array[-1], int(currentFrame), timeStamp)
+        # When detected, display error:
+        if detected_error:
+            print(f"Pano-to-70 error at: {round(timeStamp, 4)} seconds")
 
         prev_frame = frame
 
     video.release()
+    
+    duration = time.perf_counter() - start
+    print(f'Processing Time: {duration}')
+    
+    
+    # ------------------------- Old Test Code ---------------------------------
+    # from auto_mask import create_mask
 
-    # Final plots for analysis over time.
-    time_axis = np.arange(0, len(edge_array) / 60, 1/60)
-    plot_autocorr(auto_corr_array)
+    # edge_array = []
+    # auto_corr_array = []
+    # pix_array = []
 
-    plt.figure()
-    plt.plot(time_axis, edge_array)
-    plt.title('Number of Valid Contours per Frame')
+    # video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo194.mp4")
+    # if not video.isOpened():
+    #     print("Error: Could not open video.")
+    #     exit()
 
-    plt.show()
+    # fps = video.get(cv2.CAP_PROP_FPS)
+    # time_interval = 1 / fps
+
+    # frameRead, prev_frame = video.read()
+    # if not frameRead:
+    #     print("Error: Could not read first frame.")
+    #     exit()
+
+    # lmask = create_mask(prev_frame)
+    # kernel = np.ones((3, 3), np.uint8)
+    # for _ in range(20):
+    #     lmask = cv2.erode(lmask, kernel)
+
+    # overlayed_frame = prev_frame.copy()
+    # overlayed_frame[lmask > 0] = cv2.add(overlayed_frame[lmask > 0], (255, 255, 255, 0))
+    # overlayed_frame = cv2.cvtColor(overlayed_frame, cv2.COLOR_BGR2RGB)
+    # plt.figure()
+    # plt.imshow(overlayed_frame)
+    # plt.title('First Frame with Mask Overlay')
+    # plt.axis('off')
+    
+    # while video.isOpened():
+    #     currentFrame = video.get(cv2.CAP_PROP_POS_FRAMES)
+    #     timeStamp = currentFrame / fps
+
+    #     frameRead, frame = video.read()
+    #     if not frameRead:
+    #         break
+
+    #     # Improved autocorrelation analysis using the updated function.
+    #     analyze_autocorr_test(frame, pix_array, auto_corr_array)
+
+    #     # Edge-based detection as before.
+    #     panoState_edge, edges = checkPanoEdge_test(frame, prev_frame, lmask, edge_array)
+
+    #     # Combine detection metrics:
+    #     # Use either the edge detection flag or the autocorrelation repeated-region flag.
+    #     if panoState_edge or repeated_region_array[-1]:
+    #         print(f"Pano-to-70 error at: {round(timeStamp, 4)} seconds (Frame {int(currentFrame)}) Edge: {panoState_edge} Repeated Region: {repeated_region_array[-1]}")
+    #         plot_error_frame(frame, auto_corr_array[-1], pix_array[-1], int(currentFrame), timeStamp)
+
+    #     # # plot detailed analysis for random frame.
+    #     # if currentFrame in range(410,430):
+    #     #      plot_error_frame(frame, auto_corr_array[-1], pix_array[-1], int(currentFrame), timeStamp)
+
+    #     prev_frame = frame
+
+    # video.release()
+
+    # # Final plots for analysis over time.
+    # time_axis = np.arange(0, len(edge_array) / 60, 1/60)
+    # plot_autocorr(auto_corr_array)
+
+    # plt.figure()
+    # plt.plot(time_axis, edge_array)
+    # plt.title('Number of Valid Contours per Frame')
+
+    # plt.show()
