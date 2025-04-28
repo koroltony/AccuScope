@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import time
 
 start_time = time.time()
@@ -11,7 +11,12 @@ def detect_frozen_frame(frame1, frame2, threshold=1):
     gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
     diff_pixels = np.count_nonzero(gray_diff > threshold)
     # print(diff_pixels)
-    return diff_pixels < frame1.shape[0] * frame1.shape[1] * 0.01 # returns yes if the number of diff pixels is less than the number of frame pixels * x where x = 0.01 or 1%
+    
+    # returns yes if the number of diff pixels is less than the number of frame pixels * x where x = 0.01 or 1%
+    return diff_pixels < frame1.shape[0] * frame1.shape[1] * 0.01 
+
+
+# ----------------- Obsolete test code ----------------------------------------
 
 # Function to identify frozen frame intervals and convert to seconds
 def detect_frozen_intervals(window_sums, window_threshold, window_size, fps):

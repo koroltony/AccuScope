@@ -3,16 +3,15 @@ import numpy as np
 import time
 import keyboard
 import os
-import shutil
 import matplotlib.pyplot as plt
 from source.greenVectorizedSolution import checkGreenFrame_numba as checkGreenFrame
 from source.magentaScreen import checkMagentaFrame_numba as checkMagentaFrame
-from source.dropoutScreen import checkBlackFrame
+from source.dropoutScreen import checkBlackFrame_numba as checkBlackFrame
 from source.highlights import checkHighlightsFrame
 from source.lagff15 import detect_frozen_frame
 from source.auto_mask import create_mask
 from source.panoto70fcn import checkPanoEdge
-from source.panoto70fcn import repeated_region
+from source.panoto70fcn import repeated_region_numba as repeated_region
 from source.menuDetect import hasMenu
 
 # Define the folder to save videos
@@ -200,30 +199,30 @@ video_indices = [
 next_index = max(video_indices, default=0) + 1
 
 # Define the output video path with the new name
-output_video_path = os.path.join(output_folder, f"RawVideo{next_index}.mp4")
+output_video_path1 = os.path.join(output_folder, f"RawVideo{next_index}.mp4")
 
-saved_vid = cv2.VideoWriter(output_video_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, [frame_width,frame_height])
+saved_vid = cv2.VideoWriter(output_video_path1, cv2.VideoWriter_fourcc(*'mp4v'), 60, (frame_width,frame_height))
 
 frame_count = 0
 start_time = time.time()
 
 # ---------------------------------
 
-output_folder2 = "Edge_images"
-os.makedirs(output_folder2, exist_ok=True)
-# Get a list of all existing files in the folder
-existing_files2 = os.listdir(output_folder2)
+# output_folder2 = "Edge_images"
+# os.makedirs(output_folder2, exist_ok=True)
+# # Get a list of all existing files in the folder
+# existing_files2 = os.listdir(output_folder2)
 
-# Find the highest existing video index
-video_indices2 = [
-    int(f.split("Edge")[1].split(".")[0]) for f in existing_files2 if f.startswith("Edge") and f.endswith(".mp4")
-]
-next_index2 = max(video_indices2, default=0) + 1
+# # Find the highest existing video index
+# video_indices2 = [
+#     int(f.split("Edge")[1].split(".")[0]) for f in existing_files2 if f.startswith("Edge") and f.endswith(".mp4")
+# ]
+# next_index2 = max(video_indices2, default=0) + 1
 
-# Define the output video path with the new name
-output_video_path2 = os.path.join(output_folder2, f"Edge{next_index2}.mp4")
+# # Define the output video path with the new name
+# output_video_path2 = os.path.join(output_folder2, f"Edge{next_index2}.mp4")
 
-savededge_vid = cv2.VideoWriter(output_video_path2, cv2.VideoWriter_fourcc(*'mp4v'), fps, [frame_width,frame_height])
+#savededge_vid = cv2.VideoWriter(output_video_path2, cv2.VideoWriter_fourcc(*'mp4v'), fps, [frame_width,frame_height])
 
 
 
@@ -252,6 +251,8 @@ while True:
     ret, frame = video.read()
     if not ret:
         break
+    
+    saved_vid.write(frame)
 
     # filePathAndOutputName = os.path.join(path, f'frame{currentFrame}.jpg')
     # cv2.imwrite(filePathAndOutputName, frame)
@@ -327,10 +328,10 @@ while True:
         frozen_frame_buffer.pop(0)
 
     # Check pano
-    pano_state_return = checkPanoEdge(frame,prev_frame,shrunk_mask)
-    pano_state = pano_state_return[0]
-    edge_frame = np.uint8(pano_state_return[1])
-    edge_frame = cv2.merge((edge_frame, edge_frame, edge_frame))
+    # pano_state_return = checkPanoEdge(frame,prev_frame,shrunk_mask)
+    # pano_state = pano_state_return[0]
+    # edge_frame = np.uint8(pano_state_return[1])
+    # edge_frame = cv2.merge((edge_frame, edge_frame, edge_frame))
     
     #uncomment to use edge-detection for Pano to 70 detection
     
@@ -365,20 +366,20 @@ while True:
         cv2.putText(error_display, 'Error Stream', top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
         cv2.putText(error_display, 'No Error', center_pos, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
 
-    if not savededge_vid.isOpened():
-        print("Error: VideoWriter failed to open.")
+    # if not savededge_vid.isOpened():
+    #     print("Error: VideoWriter failed to open.")
 
-    if edge_frame is not None:
-        savededge_vid.write(edge_frame)
-    else:
-        print("Warning: edge_frame is None at frame", currentFrame)
+    # if edge_frame is not None:
+    #     savededge_vid.write(edge_frame)
+    # else:
+    #     print("Warning: edge_frame is None at frame", currentFrame)
 
-    #print(type(frame), frame.shape)
-    #print(type(edge_frame), edge_frame.shape)
+    # #print(type(frame), frame.shape)
+    # #print(type(edge_frame), edge_frame.shape)
 
-    # Label the input frame
-    saved_vid.write(frame)
-    savededge_vid.write(edge_frame)
+    # # Label the input frame
+    # saved_vid.write(frame)
+    # savededge_vid.write(edge_frame)
 
     cv2.putText(frame, 'Input Video', top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
 
@@ -403,7 +404,7 @@ while True:
 video.release()
 out.release()
 saved_vid.release()
-savededge_vid.release()
+#savededge_vid.release()
 cv2.destroyAllWindows()
 
 # Calculate actual FPS

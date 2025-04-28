@@ -1,10 +1,6 @@
 import cv2
-import os
-import time
 import numpy as np
 from numba import njit
-
-start_time = time.time()
 
 def checkBlackFrame(frame,mask):
 

@@ -3,7 +3,8 @@ import cv2
 import time
 from numba import njit
 
-# Generate fake frames and a mask (480x640 with 3 channels)
+# Generate fake frames and a mask (480x640)
+
 num_frames = 1000
 height, width = 480, 640
 
@@ -48,11 +49,11 @@ def checkBlackFrame_numba_nomask(frame):
                 return 0
     return 1
 
-# Warm-up
+# Pre-compile numba scripts with initial operation for efficienct processing
 _ = checkBlackFrame_numba(frames[0], mask)
 _ = checkBlackFrame_numba_nomask(frames[0])
 
-# --- Benchmarks ---
+# --- Benchmark code ---
 
 numpy_results = []
 numba_results = []
