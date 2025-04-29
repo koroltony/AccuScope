@@ -93,7 +93,7 @@ def repeated_region_numpy_illustrative(frame):
     # Get peak indices
     peak_indices = find_peaks_numpy_illustrative(autocorr_log, window=7)
     
-    if len(peak_indices) >= 6:
+    if len(peak_indices) >= 3:
         plt.figure()
         plt.plot(autocorr_log, label='log(autocorr)')
         plt.plot(peak_indices, autocorr_log[peak_indices], 'ro', label='Peaks')
@@ -101,7 +101,7 @@ def repeated_region_numpy_illustrative(frame):
         plt.legend()
         plt.show()
 
-    return len(peak_indices) >= 6
+    return len(peak_indices) >= 3
 
 # ---------------------- Numpy Implementation -----------------------------------
 
@@ -134,7 +134,7 @@ def repeated_region_numpy(frame):
 
     peak_indices = find_peaks_numpy(autocorr_log, window=7)
 
-    return peak_indices >= 6
+    return peak_indices >= 3
 
 # -------------------- Scipy Implementation -----------------------------------
 
