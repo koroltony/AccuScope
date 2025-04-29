@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import subprocess
 import sys
 from scipy.signal import correlate, find_peaks
+from scipy.ndimage import convolve1d
 from numba import njit
 import time
 
@@ -62,26 +63,18 @@ def repeated_region(frame):
 
 # ----------------------------------------------------------------------------------------
 
-def find_peaks_numpy(signal, prominence=0.3):
-    peaks = []
-    for i in range(1, len(signal) - 1):
-        if signal[i] > signal[i - 1] and signal[i] > signal[i + 1]:
-            # Look left
-            left_min = signal[i]
-            for j in range(i - 1, -1, -1):
-                if signal[j] > signal[i]:
-                    break
-                left_min = min(left_min, signal[j])
-            # Look right
-            right_min = signal[i]
-            for j in range(i + 1, len(signal)):
-                if signal[j] > signal[i]:
-                    break
-                right_min = min(right_min, signal[j])
-            # Prominence check
-            if signal[i] - max(left_min, right_min) >= prominence:
-                peaks.append(i)
-    return np.array(peaks)
+def find_peaks_numpy(signal, threshold=0.2, laplacian_threshold=0.01, window=2):
+    size = 2 * window + 1
+    kernel = np.zeros(size)
+    kernel[window] = 1
+    for i in range(window):
+        kernel[i] = kernel[-(i + 1)] = -1 / (2 * window)
+        
+    # Using scipy convolve1d because it is faster than numpy np.convolve
+
+    laplacian = convolve1d(signal, kernel, mode='constant', cval=0.0)
+    mask = (signal > threshold) & (laplacian > laplacian_threshold)
+    return np.count_nonzero(mask)
 
 # NumPy version
 def repeated_region_numpy(frame):
@@ -93,23 +86,25 @@ def repeated_region_numpy(frame):
     autocorr /= np.max(autocorr) or 1
     autocorr_log = np.log1p(np.abs(autocorr))
     # Compare surrounding values to identify peaks in autocorrelation spectrum
-    peaks = find_peaks_numpy(autocorr_log, prominence=0.3)
+    peaks = find_peaks_numpy(autocorr_log, window = 5)
     
-    # if int(len(peaks)) >= 3:
+    # if peaks >= 6:
     #     plt.figure()
     #     plt.plot(autocorr_log)
-    return int(len(peaks) >= 3)
+    return peaks >= 6
+
+# -------------------- Scipy Implementation -----------------------------------
 
 def repeated_region_scipy(frame):
     img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     center = img.shape[1] // 2
     region_avg = np.mean(img[20:400, center - 5:center + 5], axis=1)
     norm = (region_avg - np.mean(region_avg)) / (np.std(region_avg) or 1)
-    autocorr = correlate(norm, norm, mode='full',method='fft')[len(norm)-1:]
+    autocorr = correlate(norm, norm, mode='full',method='fft')
     autocorr /= np.max(autocorr) or 1
     autocorr_log = np.log1p(np.abs(autocorr))
-    peaks,_ = find_peaks(autocorr_log, prominence=0.3)
-    return int(len(peaks) >= 3)
+    peaks,_ = find_peaks(autocorr_log, prominence=0.5)
+    return int(len(peaks)) >= 3
 
 # --------------------- Numba Implementation  ---------------------------------
 
@@ -159,9 +154,9 @@ def repeated_region_numba(frame):
     autocorr_log = autocorr_and_log(region_avg)
     peak_count = find_peaks_numba(autocorr_log,window=5)
     
-    if int(peak_count >= 3):
-        plt.figure()
-        plt.plot(autocorr_log)
+    # if int(peak_count >= 3):
+    #     plt.figure()
+    #     plt.plot(autocorr_log)
     return int(peak_count >= 3)
 
 # ----------------------------------------------------------------------------------------
@@ -306,7 +301,7 @@ if __name__ == "__main__":
     auto_corr_array = []
     pix_array = []
 
-    video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo220.mp4")
+    video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo194.mp4")
     
     if not video.isOpened():
         print("Error: Could not open video.")
@@ -343,7 +338,7 @@ if __name__ == "__main__":
             break
 
         # Test Pano-to-70 method:
-        detected_error = repeated_region_numba(frame)
+        detected_error = repeated_region_numpy(frame)
 
         # When detected, display error:
         if detected_error:
