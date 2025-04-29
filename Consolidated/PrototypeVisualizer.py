@@ -4,19 +4,20 @@ import time
 import sys
 import os
 import matplotlib.pyplot as plt
-from source.greenVectorizedSolution import checkGreenFrame
-from source.magentaScreen import checkMagentaFrame
-from source.dropoutScreen import checkBlackFrame
-from source.highlights import checkHighlightsFrame
-from source.lagff15 import detect_frozen_frame
-from source.auto_mask import create_mask
-from source.panoto70fcn import checkPanoEdge
-#from source.menuDetect import hasMenu
+from source_update.greenVectorizedSolution import checkGreenFrame_numba as checkGreenFrame
+from source_update.magentaScreen import checkMagentaFrame_numba as checkMagentaFrame
+from source_update.dropoutScreen import checkBlackFrame_numba as checkBlackFrame
+from source_update.highlights import checkHighlightsFrame
+from source_update.lagff15 import detect_frozen_frame
+from source_update.auto_mask import create_mask
+from source_update.panoto70fcn import checkPanoEdge
+from source_update.panoto70fcn import repeated_region_numpy as repeated_region
+from source_update.menuDetect import hasMenu
 
 # Get video path:
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-video_path = os.path.join(current_dir, "source", "realMagenta.mp4")
+video_path = "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo220.mp4"
 
 
 codeStart = time.time()
@@ -28,20 +29,19 @@ if not video.isOpened():
     sys.exit('Load Video Properly')
 
 fps = int(video.get(cv2.CAP_PROP_FPS))
-frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+frame_width = 640
+frame_height = 480
 frame_size = (frame_width, frame_height)
-output_size = (frame_width * 2+12, frame_height+8)
+output_size = (2*frame_width, frame_height)
 
 # Create an output stream to hold the prototype video
 out = cv2.VideoWriter('result_video.mp4', cv2.VideoWriter_fourcc(*'mp4v'), fps, output_size)
 
 # Create Masks
 _, initial_frame = video.read()
-lmask, smask = create_mask(initial_frame)
+initial_frame = cv2.resize(initial_frame, (640, 480), interpolation=cv2.INTER_LINEAR)
+lmask = create_mask(initial_frame).astype(np.uint8)
 video.set(cv2.CAP_PROP_POS_FRAMES, 0)
-
-plt.imshow(lmask)
 
 # Create variables for the error visualization
 prev_frame = None
@@ -52,26 +52,42 @@ error_text = "No Error"
 error_duration = fps
 error_counter = 0
 
+window_size = 10
+frozen_frame_buffer = []
+
+# Compile JIT-enabled codes before starting
+_ = checkBlackFrame(initial_frame, lmask)
+_ = checkGreenFrame(initial_frame)
+_ = checkMagentaFrame(initial_frame)
+
 while video.isOpened():
     current_frame_index = int(video.get(cv2.CAP_PROP_POS_FRAMES))
     time_stamp = current_frame_index / fps
     ret, frame = video.read()
+
     if not ret:
         break
+    
+    if frame.shape[1] != 640 or frame.shape[0] != 480:
+        frame = cv2.resize(frame, (640, 480), interpolation=cv2.INTER_LINEAR)
 
     # Check Errors
+    #print(hasMenu(frame))
     green_state = checkGreenFrame(frame)
+    #print(frame.shape)q
     if green_state == 1:
-        # Create error text and error frame variables to display later
-        error_text = f"Non Minimap Green Screen Error at {time_stamp:.2f}s"
-        print(f"Non Minimap Green Screen Error at {time_stamp:.2f}s")
+        # Create error text and error frame variables to qdisplay later
+        error_text = f"Green Screen Error at {time_stamp:.2f}s"
+        print(f"Green Screen Error at {time_stamp:.2f}s")
         error_frame = frame.copy()
         error_counter = error_duration
-    elif green_state == 2:
-        error_text = f"Minimap Green Screen Error at {time_stamp:.2f}s"
-        error_frame = frame.copy()
-        print(f"Minimap Green Screen Error at {time_stamp:.2f}s")
-        error_counter = error_duration
+    
+    # Uncomment if looking for more specific green screen labels
+    # elif green_state == 2:
+    #     error_text = f"Partial Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}"
+    #     error_frame = frame.copy()
+    #     print(f"Partial Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}")q
+    #     error_counter = error_duration
 
     magenta_state = checkMagentaFrame(frame)
     if magenta_state == 1:
@@ -81,7 +97,7 @@ while video.isOpened():
         error_frame = frame.copy()
         error_counter = error_duration
 
-    black_state = checkBlackFrame(frame)
+    black_state = checkBlackFrame(frame,lmask)
     if black_state == 1:
         # Create error text and error frame variables to display later
         error_text = f"Dropout Error at {time_stamp:.2f}s"
@@ -89,70 +105,79 @@ while video.isOpened():
         error_frame = frame.copy()
         error_counter = error_duration
 
-    if checkHighlightsFrame(frame):
-        error_text = f"Highlight Shimmer at {time_stamp:.2f}s"
-        print(f"Highlight Shimmer at {time_stamp:.2f}s")
-        error_frame = frame.copy()
-        error_counter = error_duration
+    # if checkHighlightsFrame(frame,lmask):
+    #     error_text = f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}"q
+    #     print(f"Highlight Shimmer at {time_stamp:.2f}s and frame: {currentFrame}")
+    #     error_frame = frame.copy()
+    #     error_counter = error_duration
 
     if prev_frame is not None and detect_frozen_frame(prev_frame, frame):
-        error_text = f"Frozen Frame at {time_stamp:.2f}s"
-        print(f"Frozen Frame at {time_stamp:.2f}s")
+        #print(f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}")
+        #error_text = f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}"
         frozen_frame_flags.append(1)
-        error_frame = frame.copy()
-        error_counter = error_duration
+        #error_frame = frame.copy()
+        #error_counter = error_duration
+        frozen_frame_buffer.append(1)
 
     else:
         frozen_frame_flags.append(0)
+        frozen_frame_buffer.append(0)
 
-    # only check pano if we did not already detect a dropout (because pano flags dropout)
-    if black_state != 1:
-        pano_state = checkPanoEdge(frame,lmask)
-        if pano_state == 1:
-            error_text = f"Pano-70 Error at {time_stamp:.2f}s"
-            print(f"Non Minimap Pano-70 Error at {time_stamp:.2f}s")
+    # Only check the sum if the buffer has at least `window_size` elements
+    if len(frozen_frame_buffer) >= window_size:
+        #print(f"Window sum: {sum(frozen_frame_buffer)}")
+        if sum(frozen_frame_buffer) > 4:
+            print(f"Frozen Frame Error Detected at {time_stamp:.2f}s (More than 4 in the last {window_size} frames)")
+            error_text = f"Frozen Frame Error at {time_stamp:.2f}s"
             error_frame = frame.copy()
             error_counter = error_duration
 
+        frozen_frame_buffer.pop(0)
+
+    # Check pano
+    # pano_state_return = checkPanoEdge(frame,prev_frame,shrunk_mask)
+    # pano_state = pano_state_return[0]
+    # edge_frame = np.uint8(pano_state_return[1])
+    # edge_frame = cv2.merge((edge_frame, edge_frame, edge_frame))
+    
+    #uncomment to use edge-detection for Pano to 70 detection
+    
+    # if pano_state == 1:
+    #     error_text = f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}"
+    #     print(f"Pano-70 Error at {time_stamp:.2f}s and frame: {currentFrame}")
+    #     error_frame = frame.copy()
+    #     error_counter = error_duration
+    
+    # Check pano autocorrelation
+    repeated_return = repeated_region(frame)
+    if repeated_return == 1:
+        error_text = f"Pano-70 (repeated region) Error at {time_stamp:.2f}s"
+        print(f"Pano-70 (repeated region) Error at {time_stamp:.2f}s")
+        error_frame = frame.copy()
+        error_counter = error_duration
+
+
+    # Calculate where to put the text
+    frame_height, frame_width = frame.shape[:2]
+    top_left = (int(0.02 * frame_width), int(0.05 * frame_height))
+    center_pos = (int(0.4 * frame_width), int(0.5 * frame_height))
+    error_pos = (int(0.02 * frame_width), int(0.15 * frame_height))
 
     # Create the error frames to be shown side by side with video
     if error_counter > 0:
         error_display = error_frame.copy()
-        cv2.putText(error_display, error_text, (1200, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        cv2.putText(error_display, 'Error Stream', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        cv2.putText(error_display, 'Error Stream', top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        cv2.putText(error_display, error_text, error_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
         error_counter -= 1
     else:
         error_display = black_frame.copy()
-        error_text = "No Error"
-        cv2.putText(error_display, error_text, (900, 600), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-        cv2.putText(error_display, 'Error Stream', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        cv2.putText(error_display, 'Error Stream', top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+        cv2.putText(error_display, 'No Error', center_pos, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
 
-    # Put the frames next to each other
-    cv2.putText(frame, 'Input Video', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+    cv2.putText(frame, 'Input Video', top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
 
-    # Create borders for frames:
-
-    frame_disp = cv2.copyMakeBorder(
-                 frame,
-                 2,
-                 6,
-                 3,
-                 3,
-                 cv2.BORDER_CONSTANT,
-                 value=(225,225,225)
-              )
-
-    error_display_disp = cv2.copyMakeBorder(
-                 error_display,
-                 2,
-                 6,
-                 3,
-                 3,
-                 cv2.BORDER_CONSTANT,
-                 value=(225,225,225)
-              )
-
-    combined_frame = np.hstack((frame_disp, error_display_disp))
+    # Combine the frames side by side
+    combined_frame = np.hstack((frame, error_display))
 
     # Write to Output Video
     out.write(combined_frame)
@@ -165,17 +190,17 @@ cv2.destroyAllWindows()
 
 print("--- %s seconds ---" % (time.time() - codeStart))
 
-window_size = 10
+# window_size = 10
 
-# Sliding window sum
-window_sums = [sum(frozen_frame_flags[i:i+window_size]) for i in range(len(frozen_frame_flags) - window_size + 1)]
+# # Sliding window sum
+# window_sums = [sum(frozen_frame_flags[i:i+window_size]) for i in range(len(frozen_frame_flags) - window_size + 1)]
 
-# Plotting with window sum (window sum for visualizing concentration otherwise we would see a bunch of 1's in a row)
-plt.figure(figsize=(10, 5))
-plt.plot(window_sums, label='Window Sums')
-#plt.axhline(y=np.mean(window_sums), color='r', linestyle='--', label='Mean')
-plt.xlabel('Index')
-plt.ylabel('Sum of Ones')
-plt.title('Concentration of Detections')
-plt.legend()
-plt.show()
+# # Plotting with window sum (window sum for visualizing concentration otherwise we would see a bunch of 1's in a row)
+# plt.figure(figsize=(10, 5))
+# plt.plot(window_sums, label='Window Sums')
+# #plt.axhline(y=np.mean(window_sums), color='r', linestyle='--', label='Mean')
+# plt.xlabel('Index')
+# plt.ylabel('Sum of Ones')
+# plt.title('Concentration of Detections')
+# plt.legend()
+# plt.show()
