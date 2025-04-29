@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import subprocess
 import sys
 from scipy.signal import correlate, find_peaks
-from scipy.ndimage import convolve1d
+from scipy.ndimage import convolve1d, maximum_filter1d
 from numba import njit
 import time
 
@@ -63,18 +63,64 @@ def repeated_region(frame):
 
 # ----------------------------------------------------------------------------------------
 
-def find_peaks_numpy(signal, threshold=0.2, laplacian_threshold=0.01, window=2):
+def find_peaks_numpy_illustrative(signal, threshold=0.3, laplacian_threshold=0.01, window=2, peak_distance = 5):
     size = 2 * window + 1
     kernel = np.zeros(size)
     kernel[window] = 1
     for i in range(window):
         kernel[i] = kernel[-(i + 1)] = -1 / (2 * window)
         
-    # Using scipy convolve1d because it is faster than numpy np.convolve
-
     laplacian = convolve1d(signal, kernel, mode='constant', cval=0.0)
     mask = (signal > threshold) & (laplacian > laplacian_threshold)
-    return np.count_nonzero(mask)
+    
+    # Non-maximum suppression to isolate true peaks
+    max_filtered = maximum_filter1d(signal, size=2 * peak_distance + 1, mode='constant')
+    true_peak_mask = (signal == max_filtered) & mask
+    
+    peak_indices = np.nonzero(true_peak_mask)[0]
+    return peak_indices
+
+# NumPy version
+def repeated_region_numpy_illustrative(frame):
+    img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    center = img.shape[1] // 2
+    region_avg = np.mean(img[20:400, center - 5:center + 5], axis=1)
+    norm = (region_avg - np.mean(region_avg)) / (np.std(region_avg) or 1)
+    autocorr = np.correlate(norm, norm, mode='full')[len(norm)-1:]
+    autocorr /= np.max(autocorr) or 1
+    autocorr_log = np.log1p(np.abs(autocorr))
+
+    # Get peak indices
+    peak_indices = find_peaks_numpy_illustrative(autocorr_log, window=7)
+    
+    if len(peak_indices) >= 6:
+        plt.figure()
+        plt.plot(autocorr_log, label='log(autocorr)')
+        plt.plot(peak_indices, autocorr_log[peak_indices], 'ro', label='Peaks')
+        plt.title("Autocorrelation Peaks")
+        plt.legend()
+        plt.show()
+
+    return len(peak_indices) >= 6
+
+# ---------------------- Numpy Implementation -----------------------------------
+
+def find_peaks_numpy(signal, threshold=0.3, laplacian_threshold=0.01, window=2, peak_distance = 5):
+    size = 2 * window + 1
+    kernel = np.zeros(size)
+    kernel[window] = 1
+    for i in range(window):
+        kernel[i] = kernel[-(i + 1)] = -1 / (2 * window)
+        
+    laplacian = convolve1d(signal, kernel, mode='constant', cval=0.0)
+    mask = (signal > threshold) & (laplacian > laplacian_threshold)
+    
+    # Non-maximum suppression to isolate true peaks
+    max_filtered = maximum_filter1d(signal, size=2 * peak_distance + 1, mode='constant')
+    true_peak_mask = (signal == max_filtered) & mask
+    
+    peak_len = len(np.nonzero(true_peak_mask)[0])
+    return peak_len
 
 # NumPy version
 def repeated_region_numpy(frame):
@@ -85,13 +131,10 @@ def repeated_region_numpy(frame):
     autocorr = np.correlate(norm, norm, mode='full')[len(norm)-1:]
     autocorr /= np.max(autocorr) or 1
     autocorr_log = np.log1p(np.abs(autocorr))
-    # Compare surrounding values to identify peaks in autocorrelation spectrum
-    peaks = find_peaks_numpy(autocorr_log, window = 5)
-    
-    # if peaks >= 6:
-    #     plt.figure()
-    #     plt.plot(autocorr_log)
-    return peaks >= 6
+
+    peak_indices = find_peaks_numpy(autocorr_log, window=7)
+
+    return peak_indices >= 6
 
 # -------------------- Scipy Implementation -----------------------------------
 
@@ -103,8 +146,8 @@ def repeated_region_scipy(frame):
     autocorr = correlate(norm, norm, mode='full',method='fft')
     autocorr /= np.max(autocorr) or 1
     autocorr_log = np.log1p(np.abs(autocorr))
-    peaks,_ = find_peaks(autocorr_log, prominence=0.5)
-    return int(len(peaks)) >= 3
+    peaks,_ = find_peaks(autocorr_log, prominence=0.3)
+    return int(len(peaks)) >= 6
 
 # --------------------- Numba Implementation  ---------------------------------
 
@@ -126,7 +169,7 @@ def autocorr_and_log(vec):
     return autocorr
 
 @njit
-def find_peaks_numba(signal, threshold=0.2, laplacian_threshold=0.01, window=2):
+def find_peaks_numba(signal, threshold=0.3, laplacian_threshold=0.01, window=2):
     count = 0
     n = len(signal)
 
@@ -157,7 +200,7 @@ def repeated_region_numba(frame):
     # if int(peak_count >= 3):
     #     plt.figure()
     #     plt.plot(autocorr_log)
-    return int(peak_count >= 3)
+    return int(peak_count >= 6)
 
 # ----------------------------------------------------------------------------------------
 def checkPanoEdge_test(frame, prev_frame, lmask, edge_array):
@@ -338,7 +381,7 @@ if __name__ == "__main__":
             break
 
         # Test Pano-to-70 method:
-        detected_error = repeated_region_numpy(frame)
+        detected_error = repeated_region_numba(frame)
 
         # When detected, display error:
         if detected_error:
