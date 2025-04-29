@@ -131,22 +131,25 @@ def autocorr_and_log(vec):
     return autocorr
 
 @njit
-def find_peaks_numba(signal, threshold=0.3, laplacian_threshold=0.005):
+def find_peaks_numba(signal, threshold=0.2, laplacian_threshold=0.01, window=2):
     count = 0
     n = len(signal)
-    
-    for i in range(2, n - 2):
+
+    for i in range(window, n - window):
         center = signal[i]
-        
         if center <= threshold:
             continue
 
-        neighbors_avg = (signal[i - 2] + signal[i - 1] + signal[i + 1] + signal[i + 2]) / 4.0
+        neighbors_sum = 0.0
+        for offset in range(1, window + 1):
+            neighbors_sum += signal[i - offset] + signal[i + offset]
+
+        neighbors_avg = neighbors_sum / (2 * window)
         laplacian = center - neighbors_avg
-        
+
         if laplacian > laplacian_threshold:
             count += 1
-            
+
     return count
 
 def repeated_region_numba(frame):
@@ -154,9 +157,7 @@ def repeated_region_numba(frame):
     center = img.shape[1] // 2
     region_avg = np.mean(img[20:400, center - 5:center + 5], axis=1).astype(np.float32)
     autocorr_log = autocorr_and_log(region_avg)
-    peak_count = find_peaks_numba(autocorr_log)
-    
-    # MAKE SURE TO UPDATE THE LAPLACIAN SO IT DOES NOT PICK UP NOISE!!!!
+    peak_count = find_peaks_numba(autocorr_log,window=5)
     
     if int(peak_count >= 3):
         plt.figure()
@@ -342,7 +343,7 @@ if __name__ == "__main__":
             break
 
         # Test Pano-to-70 method:
-        detected_error = repeated_region_numpy(frame)
+        detected_error = repeated_region_numba(frame)
 
         # When detected, display error:
         if detected_error:
