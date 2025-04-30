@@ -18,7 +18,7 @@ from source_update.menuDetect import hasMenu
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 video_path = "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated/source_update/stitched_test_video.mp4"
-video_path = "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo194.mp4"
+#video_path = "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo194.mp4"
 
 
 codeStart = time.time()
@@ -120,9 +120,9 @@ while video.isOpened():
     #     error_counter = error_duration
 
     if prev_frame is not None and detect_frozen_frame(prev_frame, frame):
-        #print(f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}")
-        #error_text = f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}"
-        frozen_frame_flags.append(1)
+        #print(f"Frozen Frame at {time_stamp:.2f}s")
+        #error_text = f"Frozen Frame at {time_stamp:.2f}s"
+        #frozen_frame_flags.append(1)
         #error_frame = frame.copy()
         #error_counter = error_duration
         frozen_frame_buffer.append(1)
