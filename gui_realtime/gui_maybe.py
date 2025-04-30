@@ -307,7 +307,9 @@ class VideoPlayer:
 
             file_name = os.path.basename(self.file_path)  # Extract just the file name
             self.update_status("Video is currently playing.", "Calculating...", "green")
-            self.update_log(f"Video file '{file_name}' is now being processed...", "blue")  # Add log update
+            self.update_log(f"Video file '{self.file_path}' is now being processed...", "blue")  # Add log update with the whole path
+            #self.update_log(f"Video file '{file_name}' is now being processed...", "blue")  # Add log update with only the file name
+
             self.play_flag = True
             self.process_video_frame()
         else:
