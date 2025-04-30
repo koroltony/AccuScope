@@ -49,8 +49,8 @@ video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
 video.set(cv2.CAP_PROP_FPS,60)
 
 ret, frame = video.read()
-if ret:
-    print("Processed Frame shape:", frame.shape)
+# if ret:
+#     print("Processed Frame shape:", frame.shape)
 
 # Make sure the video reader is not repeating frames
 
@@ -63,8 +63,8 @@ if not video.isOpened():
 fps = int(video.get(cv2.CAP_PROP_FPS))
 frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-print(frame_width)
-print(frame_height)
+# print(frame_width)
+# print(frame_height)
 output_size = (2*frame_width, frame_height)
 
 # Create an output stream to hold the prototype video

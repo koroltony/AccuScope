@@ -4,23 +4,19 @@ from numba import njit
 
 start_time = time.time()
 
-def checkMagentaFrame(frame, threshold_ratio=0.1):
+def checkMagentaFrame(frame, threshold = 50):
 
     magenta_mask = (frame[:, :, 2] > 120) & (frame[:, :, 1] < 50) & (frame[:, :, 0] > 120)
 
 
     magenta_count = np.sum(magenta_mask)
 
-    total_pixels = 640*480
-
     # If the proportion of magenta pixels is greater than a certain value:
-    return 1 if magenta_count / total_pixels > threshold_ratio else 0
+    return 1 if magenta_count > threshold else 0
 
 @njit
-def checkMagentaFrame_numba(frame, threshold_ratio=0.1):
+def checkMagentaFrame_numba(frame, threshold = 50):
     count = 0
-    total_pixels = 640*480
-    threshold = total_pixels * threshold_ratio
 
     for i in range(480):
         for j in range(640):
