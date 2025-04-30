@@ -8,8 +8,10 @@ password = "Arthrex1"
 
 conn = Connection(host = "192.168.1.235", user="arthrex", connect_kwargs={'password': password})
 
-for caseIndex in range(1, 10):
-    time.sleep(5)
-    source_path = "/home/arthrex/system_logs.txt"
-    destination_path = f"case{caseIndex}.txt"
-    conn.run(f'cp {source_path} /home/arthrex/cases/{destination_path}')
+print("running")
+
+conn.run('nohup python3 jtopTestScript.py > log.txt 2>&1 &', pty=False)
+
+time.sleep(5)
+
+conn.run("pkill -f jtopTestScript.py")
