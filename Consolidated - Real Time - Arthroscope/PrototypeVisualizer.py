@@ -355,6 +355,8 @@ while True:
         print(f"Pano-70 (repeated region) Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_frame = frame.copy()
         error_counter = error_duration
+    
+    prev_frame = frame.copy()
 
     # Calculate where to put the text
     frame_height, frame_width = frame.shape[:2]
@@ -395,8 +397,6 @@ while True:
 
     # Write to Output Video
     out.write(combined_frame)
-
-    prev_frame = frame.copy()
 
     #print("Frame size:", frame.shape if frame is not None else "None")
     #print("Edge frame size:", edge_frame.shape if edge_frame is not None else "None")

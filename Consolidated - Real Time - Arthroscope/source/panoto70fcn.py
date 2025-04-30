@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import subprocess
 import sys
 from scipy.signal import correlate, find_peaks
-from scipy.ndimage import convolve1d, maximum_filter1d
+from scipy.ndimage import convolve1d, maximum_filter1d, gaussian_filter1d
 from numba import njit
 import time
 
