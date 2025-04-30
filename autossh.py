@@ -12,6 +12,12 @@ print("running")
 
 conn.run('nohup python3 jtopTestScript.py > log.txt 2>&1 &', pty=False)
 
-time.sleep(5)
+time.sleep(1)
+
+print('running in background')
+
+time.sleep(1)
 
 conn.run("pkill -f jtopTestScript.py")
+
+print('command killed')

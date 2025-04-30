@@ -13,7 +13,7 @@ def detect_frozen_frame(frame1, frame2, threshold=1):
     # print(diff_pixels)
     
     # returns yes if the number of diff pixels is less than the number of frame pixels * x where x = 0.01 or 1%
-    return diff_pixels < frame1.shape[0] * frame1.shape[1] * 0.01 
+    return diff_pixels < frame1.shape[0] * frame1.shape[1] * 0.001 
 
 
 # ----------------- Obsolete test code ----------------------------------------
