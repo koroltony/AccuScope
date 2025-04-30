@@ -128,10 +128,11 @@ while video.isOpened():
         frozen_frame_buffer.append(1)
 
     else:
-        frozen_frame_flags.append(0)
+        #frozen_frame_flags.append(0)
         frozen_frame_buffer.append(0)
 
     # Only check the sum if the buffer has at least `window_size` elements
+
     if len(frozen_frame_buffer) >= window_size:
         #print(f"Window sum: {sum(frozen_frame_buffer)}")
         if sum(frozen_frame_buffer) > 4:

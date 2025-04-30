@@ -505,7 +505,7 @@ class VideoPlayer:
         
         # Check pano autocorrelation
         if "pano" in self.scripts and self.scripts["pano"]:
-            if self.scripts["pano"].repeated_region(frame):
+            if self.scripts["pano"].repeated_region_numpy(frame):
                 #error_text = f"Pano-70 (repeated region) Error at {round((currentFrame/self.fps), 4)}s and frame: {currentFrame}"
                 error_text = "Pano-70 Error" if self.is_realtime else f"Pano-70 Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
 
