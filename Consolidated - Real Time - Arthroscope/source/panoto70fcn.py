@@ -63,7 +63,7 @@ def repeated_region(frame):
 
 # ----------------------------------------------------------------------------------------
 
-def find_peaks_numpy_illustrative(signal, threshold=0.3, laplacian_threshold=0.01, window=2, peak_distance = 5):
+def find_peaks_numpy_illustrative(signal, threshold=0.2, laplacian_threshold=0.075, window=5, peak_distance = 5):
     size = 2 * window + 1
     kernel = np.zeros(size)
     kernel[window] = 1
@@ -78,7 +78,9 @@ def find_peaks_numpy_illustrative(signal, threshold=0.3, laplacian_threshold=0.0
     true_peak_mask = (signal == max_filtered) & mask
     
     peak_indices = np.nonzero(true_peak_mask)[0]
-    return peak_indices
+            
+    return np.array(peak_indices)
+
 
 # NumPy version
 def repeated_region_numpy_illustrative(frame):
@@ -91,9 +93,9 @@ def repeated_region_numpy_illustrative(frame):
     autocorr_log = np.log1p(np.abs(autocorr))
 
     # Get peak indices
-    peak_indices = find_peaks_numpy_illustrative(autocorr_log, window=7)
+    peak_indices = find_peaks_numpy_illustrative(autocorr_log, window=20)
     
-    if len(peak_indices) >= 3:
+    if len(peak_indices) >= 5:
         plt.figure()
         plt.plot(autocorr_log, label='log(autocorr)')
         plt.plot(peak_indices, autocorr_log[peak_indices], 'ro', label='Peaks')
@@ -101,11 +103,11 @@ def repeated_region_numpy_illustrative(frame):
         plt.legend()
         plt.show()
 
-    return len(peak_indices) >= 3
+    return len(peak_indices) >= 5
 
 # ---------------------- Numpy Implementation -----------------------------------
 
-def find_peaks_numpy(signal, threshold=0.3, laplacian_threshold=0.01, window=2, peak_distance = 5):
+def find_peaks_numpy(signal, threshold=0.2, laplacian_threshold=0.075, window=5, peak_distance = 5):
     size = 2 * window + 1
     kernel = np.zeros(size)
     kernel[window] = 1
@@ -120,9 +122,9 @@ def find_peaks_numpy(signal, threshold=0.3, laplacian_threshold=0.01, window=2, 
     true_peak_mask = (signal == max_filtered) & mask
     
     peak_len = len(np.nonzero(true_peak_mask)[0])
+            
     return peak_len
 
-# NumPy version
 def repeated_region_numpy(frame):
     img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     center = img.shape[1] // 2
@@ -132,9 +134,10 @@ def repeated_region_numpy(frame):
     autocorr /= np.max(autocorr) or 1
     autocorr_log = np.log1p(np.abs(autocorr))
 
-    peak_indices = find_peaks_numpy(autocorr_log, window=7)
+    # Get peak indices
+    peak_len = find_peaks_numpy(autocorr_log, window=20)
 
-    return peak_indices >= 3
+    return peak_len >= 5
 
 # -------------------- Scipy Implementation -----------------------------------
 

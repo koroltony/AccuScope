@@ -274,6 +274,13 @@ while True:
         print(f"Green Screen Error at {time_stamp:.2f}s and frame: {currentFrame}")
         error_frame = frame.copy()
         error_counter = error_duration
+        
+    elif green_state == 2:
+        # Create error text and error frame variables to qdisplay later
+        error_text = f"Corner Green Screen Error at {time_stamp:.2f}s"
+        print(f"Corner Green Screen Error at {time_stamp:.2f}s")
+        error_frame = frame.copy()
+        error_counter = error_duration
     
     # Uncomment if looking for more specific green screen labels
     # elif green_state == 2:
