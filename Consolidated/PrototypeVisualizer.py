@@ -164,6 +164,9 @@ while video.isOpened():
         print(f"Pano-70 (repeated region) Error at {time_stamp:.2f}s")
         error_frame = frame.copy()
         error_counter = error_duration
+        
+    
+    prev_frame = frame.copy()
 
 
     # Calculate where to put the text
@@ -190,8 +193,6 @@ while video.isOpened():
 
     # Write to Output Video
     out.write(combined_frame)
-
-    prev_frame = frame.copy()
 
 video.release()
 out.release()
