@@ -1,16 +1,28 @@
 import sys
 import os
 import tkinter as tk
+import keyboard
 
 # Add the error detection folder to sys.path by going back to the parent directory 
 #parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..')) 
 #sys.path.append(parent_dir)
 
+'''
+check everything is up to date
+save videos? log?
+txt file with file name + error timestamps and classification
+
+
+
+'''
+
+
+
 import importlib
 
 # Function to load the correct error detection scripts dynamically
 def load_error_detection_scripts(is_realtime=False):
-    base_folder = "Consolidated - Real time - Arthroscope/source" if is_realtime else "Consolidated/source"
+    base_folder = "Consolidated - Real time - Arthroscope/source" if is_realtime else "Consolidated/source_update"
     folder_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", base_folder))
 
     if folder_path not in sys.path:
@@ -44,6 +56,8 @@ import matplotlib.pyplot as plt
 from PIL import Image, ImageTk
 from tkinter import filedialog, ttk
 from tkinter import Tk, Canvas, Text, Button, Label, Entry, StringVar, END
+from skimage import measure
+from skimage.draw import disk
 
 # Import the error detection scripts
 '''
@@ -57,6 +71,90 @@ from panoto70.panoto70fcn import checkPano
 '''
 
 currentFrame = 1
+window_size = 10
+frozen_frame_buffer = []
+
+
+class RealTimeMasking:
+    def __init__(self, video_source, scripts):
+        self.cap = video_source
+        self.scripts = scripts
+        self.kernel = np.ones((3, 3), np.uint8)
+        self.frame_counter = 0
+        self.update_interval = 10
+        self.keypress = False
+        self.keypresg = False
+        self.shrunk_mode = False
+        self.running = True # Flag to control the loop
+
+        _, self.curr_frame = self.cap.read()
+        self.lmask = self.scripts["mask"].create_mask(self.curr_frame)
+        self.lmask = self.lmask.astype(np.uint8)
+        self.shrunk_mask = self.lmask.copy()
+        self.edges_red = np.zeros_like(self.curr_frame)
+
+    def is_running(self):
+        return self.running
+
+    def update(self, frame):
+        if not self.running:
+            return None
+    
+        self.curr_frame = frame
+        self.frame_counter += 1
+
+        # Update mask every 10 frames if 'k' not pressed
+        if not keyboard.is_pressed('k'):
+            if self.frame_counter % self.update_interval == 0 or self.frame_counter == 1:
+                self.lmask = self.scripts["mask"].create_mask(self.curr_frame)
+                self.lmask = self.lmask.astype(np.uint8)
+            if not self.shrunk_mode:
+                self.shrunk_mask = self.lmask.copy()
+
+        if keyboard.is_pressed('s') and not self.keypress:
+            self.keypress = True
+        if self.keypress and not keyboard.is_pressed('s'):
+            self.shrunk_mask = cv2.erode(self.shrunk_mask, self.kernel, iterations=3)
+            self.shrunk_mode = True
+            self.keypress = False
+
+        if keyboard.is_pressed('g') and not self.keypresg:
+            self.keypresg = True
+        if self.keypresg and not keyboard.is_pressed('g'):
+            self.shrunk_mask = cv2.dilate(self.shrunk_mask, self.kernel, iterations=3)
+            self.shrunk_mode = True
+            self.keypresg = False
+
+        # Update red edge overlay
+        if self.frame_counter % self.update_interval == 0:
+            edges = cv2.Canny(self.curr_frame, 100, 200)
+            masked_edges = cv2.bitwise_and(edges, edges, mask=self.shrunk_mask)
+            self.edges_red = cv2.merge([
+                np.zeros_like(edges),
+                np.zeros_like(edges),
+                masked_edges
+            ])
+
+        pano_green = cv2.merge([
+            np.zeros_like(self.shrunk_mask),
+            self.shrunk_mask,
+            np.zeros_like(self.shrunk_mask)
+        ])
+        pano_green = (pano_green * 0.3).astype(np.uint8)
+        pano_overlay = cv2.addWeighted(pano_green, 0.5, self.edges_red, 1.0, 0)
+
+        # Show windows
+        cv2.imshow("Footage Mask", self.lmask)
+        cv2.imshow("Pano-70 Mask", pano_overlay)
+
+        # Exit when 'k' is clicked
+        if cv2.waitKey(1) & 0xFF == ord('k') or keyboard.is_pressed('k'):
+            print("Both masks set.")
+            self.running = False  # Set the flag to False to exit the loop
+            cv2.destroyAllWindows()  # Close all OpenCV windows
+        
+        return self.shrunk_mask
+
 
 class VideoPlayer:
     def __init__(self, root):
@@ -69,12 +167,15 @@ class VideoPlayer:
         self.scripts = load_error_detection_scripts(self.is_realtime)
 
         # Create and place the canvas for video playback
-        self.canvas = tk.Canvas(root, width=640, height=480)
+        self.canvas = tk.Canvas(root, bg = "black" ,width=640, height=480)
         self.canvas.grid(row=0, column=0, columnspan=3, padx=5, pady=5)
 
         # Create and place the error log
-        self.error_log = tk.Text(root, height=30, width=40)
-        self.error_log.grid(row=0, column=3, padx=5, pady=5)
+        #self.error_log = tk.Text(root, height=30, width=40)
+        self.error_log = tk.Text(root, height = 30)
+        self.error_log.grid(row=0, column=3, sticky = 'ne', padx=5, pady=5)
+
+        root.grid_columnconfigure(3, weight=2)
 
         # Create and place the video progress bar
         self.progress_label = tk.Label(root, text="0:00 / 0:00")
@@ -144,6 +245,10 @@ class VideoPlayer:
         self.error_log.insert(tk.END, message + '\n')
         self.error_log.see(tk.END)  # Scroll to the end
 
+    def save_log_to_file(self, filename="error_log.txt"):
+        with open(filename, 'w') as file:
+            file.write(self.error_log.get("1.0", tk.END))
+
     def reset_gui(self):
         """Reset the entire window by recreating the main window."""
         self.root.quit()  # Close the current window
@@ -185,7 +290,14 @@ class VideoPlayer:
                 self.cap = None  # Reset the cap to avoid stale reference
 
             self.cap = cv2.VideoCapture(self.file_path)
-            
+
+            _, initial_frame = self.cap.read()
+            initial_frame = cv2.resize(initial_frame, (640, 480), interpolation=cv2.INTER_LINEAR)
+            lmask = self.scripts["mask"].create_mask(initial_frame).astype(np.uint8)
+
+            # Set the current_mask attribute
+            self.current_mask = lmask
+
             if not self.cap.isOpened():
                 self.update_status("Error with file.", "N/A", "red")
                 return
@@ -209,7 +321,7 @@ class VideoPlayer:
         self.file_path = None
         self.play_flag = True
         self.is_realtime = True
-        self.scripts = load_error_detection_scripts(self.is_realtime)
+
 
         # Clear the canvas
         self.canvas.delete("all")
@@ -224,12 +336,20 @@ class VideoPlayer:
         
         self.cap = cv2.VideoCapture(0)
 
-        if not self.cap.isOpened():
+        if not self.cap or not self.cap.isOpened():
             self.cap = None
             self.update_status("Error with webcam.", "N/A", "red")
             return
         
+        self.scripts = load_error_detection_scripts(self.is_realtime)
+        self.masking = RealTimeMasking(self.cap, self.scripts)  # Instantiate once
+
+        
         self.is_realtime = True  # Set mode to real-time
+
+        # self.load_scripts(real_time=True)
+        self.masking = RealTimeMasking(self.cap, self.scripts)  # Safe to instantiate now
+        self.running = True
 
         self.play_flag = True  # Make sure this is set before looping
         self.start_time = time.time()
@@ -248,6 +368,8 @@ class VideoPlayer:
             if ret:
                 #print("DEBUG: frame read successfully")
                 frame = cv2.resize(frame, (640, 480))
+                if hasattr(self, 'masking') and self.masking.is_running():
+                    self.current_mask = self.masking.update(frame)
                 self.detect_and_display_errors(frame)
 
                 '''
@@ -297,11 +419,24 @@ class VideoPlayer:
                 self.update_status("Finished playing video.", "0:00", "blue")
                 self.canvas.delete("all")
 
+                if not self.is_realtime:
+                    # After processing is done
+                    file_name = self.file_path # File path included
+                    # file_name = os.path.basename(self.file_path)  # Extract just the file name
+                    self.update_log(f"Video file '{file_name}' is done being processed...", "blue")  # Add log update
+                    self.save_log_to_file()
+
 
 
 
 
     def detect_and_display_errors(self, frame):
+        if hasattr(self, 'current_mask') and self.current_mask is not None:
+            frame = cv2.bitwise_and(frame, frame, mask=self.current_mask)
+            mask_applied = True
+        else:
+            mask_applied = False
+
         with self.lock:
             error_text = "No Error"
             currentFrame = self.cap.get(cv2.CAP_PROP_POS_FRAMES)
@@ -309,34 +444,75 @@ class VideoPlayer:
         # Use dynamically loaded modules
         if "green" in self.scripts and self.scripts["green"]:
             if self.scripts["green"].checkGreenFrame(frame):
-                error_text = "Green Screen Error" if self.is_realtime else f"Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds"
+                error_text = "Green Screen Error" if self.is_realtime else f"Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 self.update_log(error_text, "red")
 
         if "magenta" in self.scripts and self.scripts["magenta"]:
             if self.scripts["magenta"].checkMagentaFrame(frame):
-                error_text = "Magenta Screen Error" if self.is_realtime else f"Magenta Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds"
+                error_text = "Magenta Screen Error" if self.is_realtime else f"Magenta Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 self.update_log(error_text, "red")
 
         if "black" in self.scripts and self.scripts["black"]:
-            if self.scripts["black"].checkBlackFrame(frame):
-                error_text = "Dropout Error" if self.is_realtime else f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds"
-                self.update_log(error_text, "red")
+            if mask_applied:
+                if self.scripts["black"].checkBlackFrame(frame):
+                    error_text = "Dropout Error" if self.is_realtime else f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    self.update_log(error_text, "red")
+            else:
+                if self.scripts["black"].checkBlackFrame(frame, self.current_mask):
+                    error_text = "Dropout Error" if self.is_realtime else f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    self.update_log(error_text, "red")
 
         #if "highlights" in self.scripts and self.scripts["highlights"]:
         #    if self.scripts["highlights"].checkHighlightsFrame(frame):
         #        error_text = f"Highlight Shimmer Detected at {round((currentFrame/self.fps), 4)} seconds"
         #        self.update_log(error_text, "red")
-
+        '''
         if "frozen" in self.scripts and self.scripts["frozen"]:
             if hasattr(self, "prev_frame") and self.scripts["frozen"].detect_frozen_frame(self.prev_frame, frame):
                 error_text = "Frozen Frame" if self.is_realtime else f"Frozen Frame Detected at {round((currentFrame/self.fps), 4)} seconds"
                 self.update_log(error_text, "red")
+        '''
+        if "frozen" in self.scripts and self.scripts["frozen"]:
+            if hasattr(self, "prev_frame") and self.scripts["frozen"].detect_frozen_frame(self.prev_frame, frame):
+                #print(f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}")
+                #error_text = f"Frozen Frame at {time_stamp:.2f}s and frame: {currentFrame}"
+                #error_frame = frame.copy()
+                #error_counter = error_duration
+                frozen_frame_buffer.append(1)
+            else:
+                frozen_frame_buffer.append(0)
 
+            # Only check the sum if the buffer has at least `window_size` elements
+            if len(frozen_frame_buffer) >= window_size:
+                #print(f"Window sum: {sum(frozen_frame_buffer)}")
+                if sum(frozen_frame_buffer) > 4:
+                    # print(f"Frozen Frame Error Detected at {round((currentFrame/self.fps), 4):.2f}s (More than 4 in the last {window_size} frames)")
+                    # error_text = f"Frozen Frame Error at {round((currentFrame/self.fps), 4):.2f}s and frame: {currentFrame}"
+                    error_text = "Frozen Frame" if self.is_realtime else f"Frozen Frame Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    self.update_log(error_text, "red")
+                    #error_frame = frame.copy()
+                    #error_counter = error_duration
+
+                frozen_frame_buffer.pop(0)
+        # '''
         #if "mask" in self.scripts and "pano" in self.scripts and self.scripts["mask"] and self.scripts["pano"]:
         #    lmask, smask = self.scripts["mask"].create_mask(frame)
         #    if self.scripts["pano"].checkPano(frame, smask, lmask):
         #        error_text = f"Pano-70 Error Detected at {round((currentFrame/self.fps), 4)} seconds"
         #        self.update_log(error_text, "red")
+        
+        # Check pano autocorrelation
+        if "pano" in self.scripts and self.scripts["pano"]:
+            if self.scripts["pano"].repeated_region(frame):
+                #error_text = f"Pano-70 (repeated region) Error at {round((currentFrame/self.fps), 4)}s and frame: {currentFrame}"
+                error_text = "Pano-70 Error" if self.is_realtime else f"Pano-70 Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+
+                # print(f"Pano-70 (repeated region) Error at {round((currentFrame/self.fps), 4)}s and frame: {currentFrame}")
+                #error_frame = frame.copy()
+                #error_counter = error_duration
+                self.update_log(error_text, "red")
+
+        
 
 
         # Update previous frame for frozen frame detection
@@ -344,12 +520,27 @@ class VideoPlayer:
 
         # Display error frame in the canvas
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # Resize frame to desired dimensions (width = 5/3 * height)
+        frame = cv2.resize(frame, (640, 384))
+        # Convert frame to PIL image
         img = Image.fromarray(frame)
         img_tk = ImageTk.PhotoImage(image=img)
+        
+        # Calculate the position to center the image on the canvas
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+        img_width = img_tk.width()
+        img_height = img_tk.height()
+
+        x = (canvas_width - img_width) // 2
+        y = (canvas_height - img_height) // 2
+
+        # Display the image on the canvas
         if self.image_on_canvas is None:
-            self.image_on_canvas = self.canvas.create_image(0, 0, anchor=tk.NW, image=img_tk)
+            self.image_on_canvas = self.canvas.create_image(x, y, anchor=tk.NW, image=img_tk)
         else:
             self.canvas.itemconfig(self.image_on_canvas, image=img_tk)
+            self.canvas.coords(self.image_on_canvas, x, y)
 
         self.current_image = img_tk  # Store reference to avoid garbage collection
 
