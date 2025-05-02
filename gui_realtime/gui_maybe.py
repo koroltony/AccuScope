@@ -308,11 +308,45 @@ class VideoPlayer:
             file.write(self.error_log.get("1.0", tk.END))
 
     def reset_gui(self):
+        '''
         """Reset the entire window by recreating the main window."""
         self.root.quit()  # Close the current window
         new_root = tk.Tk()  # Create a new Tkinter window
         new_window = VideoPlayer(new_root)  # Reinitialize the VideoPlayer window
         new_root.mainloop()  # Start the new event loop
+        '''
+
+        # Stop any playback or video capture
+        self.play_flag = False
+        if self.cap:
+            self.cap.release()
+            self.cap = None
+
+        # Clear canvas
+        self.canvas.delete("all")
+        self.image_on_canvas = None
+
+        # Reset error log
+        self.error_log.delete(1.0, tk.END)
+
+        # Reset progress
+        self.progress_bar["value"] = 0
+        self.progress_label.config(text="0:00 / 0:00")
+
+        # Reset status
+        self.status_label.config(text="No video detected.\nRemaining time: N/A", fg="red")
+
+        # Reset file and flags
+        self.file_path = None
+        self.frozen_frame_flags = []
+        self.start_time = None
+        self.fps = 0
+
+        # Re-enable buttons if needed
+        self.play_button.config(state=tk.DISABLED)
+
+        self.is_realtime = False
+
 
     def choose_file(self):
         file_path = filedialog.askopenfilename()
