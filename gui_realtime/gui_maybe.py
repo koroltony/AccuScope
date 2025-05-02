@@ -2,6 +2,7 @@ import sys
 import os
 import tkinter as tk
 import keyboard
+import subprocess
 
 # Add the error detection folder to sys.path by going back to the parent directory 
 #parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..')) 
@@ -54,7 +55,7 @@ import numpy as np
 import time
 import matplotlib.pyplot as plt
 from PIL import Image, ImageTk
-from tkinter import filedialog, ttk
+from tkinter import simpledialog, filedialog, ttk
 from tkinter import Tk, Canvas, Text, Button, Label, Entry, StringVar, END
 from skimage import measure
 from skimage.draw import disk
@@ -200,6 +201,13 @@ class VideoPlayer:
         self.reset_button = tk.Button(self.root, text="Reset", command=self.reset_gui)
         self.reset_button.grid(row=3, column=1, padx=5, pady=5)
 
+        self.autossh_button = tk.Button(root, text="Run AutoSSH", command=self.run_autossh)
+        self.autossh_button.grid(row=3, column=2, padx=5, pady=5)
+
+        self.open_logs_button = tk.Button(root, text="Open System Logs", command=self.open_system_logs)
+        self.open_logs_button.grid(row=2, column=2, padx=5, pady=5)
+
+
         # Create and place the threshold controls
         #self.threshold_label = tk.Label(root, text="Green Detection Threshold:")
         #self.threshold_label.grid(row=2, column=2, padx=5, pady=5, sticky=tk.W)
@@ -222,6 +230,56 @@ class VideoPlayer:
         self.fps = 0
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+
+
+    def run_autossh(self):
+        try:
+            ip = simpledialog.askstring("SSH IP", "Enter the remote IP address:", parent = self.root)
+            username = simpledialog.askstring("SSH Username", "Enter the username:", parent = self.root)
+            password = simpledialog.askstring("SSH Password", "Enter the password:", show="*", parent = self.root)
+
+            if not all([ip, username, password]):
+                self.status_label.config(text="SSH details incomplete.", fg="red")
+                return
+
+            # Pass the data to autossh.py
+            subprocess.Popen(
+                [sys.executable, "autossh.py", ip, username, password],
+                shell=False
+            )
+            self.status_label.config(text="autossh.py launched with user input.", fg="green")
+
+        except Exception as e:
+            self.status_label.config(text=f"Failed to run autossh.py: {e}", fg="red")
+
+    def open_system_logs(self):
+        try:
+            with open("arthrex_system_logs.txt", "r") as file:
+                content = file.read()
+
+            # Create a new popup window
+            log_window = tk.Toplevel(self.root)
+            log_window.title("System Logs")
+            log_window.geometry("600x400")
+
+            # Frame to contain Text widget and Scrollbar
+            frame = tk.Frame(log_window)
+            frame.pack(expand=True, fill=tk.BOTH)
+
+            text_widget = tk.Text(frame, wrap=tk.WORD)
+            text_widget.insert(tk.END, content)
+            text_widget.config(state=tk.DISABLED)
+            text_widget.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+
+            scrollbar = tk.Scrollbar(frame, command=text_widget.yview)
+            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            text_widget.config(yscrollcommand=scrollbar.set)
+
+        except FileNotFoundError:
+            self.status_label.config(text="system_logs.txt not found.", fg="red")
+        except Exception as e:
+            self.status_label.config(text=f"Error opening logs: {e}", fg="red")
+
 
 
     def on_close(self):
