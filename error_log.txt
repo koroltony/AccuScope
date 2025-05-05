@@ -1,5 +1,4 @@
-jjjjjkkjkjVideo file 'C:/Users/16262/Desktop/arthrex/green flash lag 3.mp4' is now being processed...
-Frozen Frame Detected at 3.5864 seconds and frame: 211.0
+Video file 'C:/Users/16262/Desktop/arthrex/green flash lag 3.mp4' is now being processed...
 Frozen Frame Detected at 3.6034 seconds and frame: 212.0
 Frozen Frame Detected at 3.6204 seconds and frame: 213.0
 Frozen Frame Detected at 3.6374 seconds and frame: 214.0
@@ -148,8 +147,10 @@ Frozen Frame Detected at 6.0509 seconds and frame: 356.0
 Frozen Frame Detected at 6.0679 seconds and frame: 357.0
 Frozen Frame Detected at 6.0849 seconds and frame: 358.0
 Frozen Frame Detected at 6.1019 seconds and frame: 359.0
+Full Green Screen Error Detected at 6.1189 seconds and frame: 360.0
 Dropout Error Detected at 6.1189 seconds and frame: 360.0
 Frozen Frame Detected at 6.1189 seconds and frame: 360.0
+Full Green Screen Error Detected at 6.1359 seconds and frame: 361.0
 Dropout Error Detected at 6.1359 seconds and frame: 361.0
 Frozen Frame Detected at 6.1359 seconds and frame: 361.0
 Frozen Frame Detected at 6.1529 seconds and frame: 362.0

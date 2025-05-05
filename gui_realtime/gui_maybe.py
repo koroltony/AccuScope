@@ -3,6 +3,7 @@ import os
 import tkinter as tk
 import keyboard
 import subprocess
+from datetime import datetime
 
 # Add the error detection folder to sys.path by going back to the parent directory 
 #parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..')) 
@@ -551,6 +552,8 @@ class VideoPlayer:
             error_text = "No Error"
             currentFrame = self.cap.get(cv2.CAP_PROP_POS_FRAMES)
 
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # e.g., 2025-05-05 14:32:21.123
+
         # Use dynamically loaded modules
         if "green" in self.scripts and self.scripts["green"]:
             
@@ -559,26 +562,42 @@ class VideoPlayer:
             #    self.update_log(error_text, "red")
 
             if self.scripts["green"].checkGreenFrame_numba(frame) == 1:
-                error_text = "Full Green Screen Error" if self.is_realtime else f"Full Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                if self.is_realtime:
+                    error_text = f"Full Green Screen Error at {timestamp}"
+                else:
+                    error_text = f"Full Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 self.update_log(error_text, "red")
 
+
             if self.scripts["green"].checkGreenFrame_numba(frame) == 2:
-                error_text = "Corner Green Screen Error" if self.is_realtime else f"Corner Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                if self.is_realtime:
+                    error_text = f"Corner Green Screen Error at {timestamp}"
+                else:
+                    error_text = f"Corner Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 self.update_log(error_text, "red")
 
         if "magenta" in self.scripts and self.scripts["magenta"]:
             if self.scripts["magenta"].checkMagentaFrame_numba(frame):
-                error_text = "Magenta Screen Error" if self.is_realtime else f"Magenta Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                if self.is_realtime:
+                    error_text = f"Magenta Screen Error at {timestamp}"
+                else:
+                    error_text = f"Magenta Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 self.update_log(error_text, "red")
 
         if "black" in self.scripts and self.scripts["black"]:
             if mask_applied:
                 if self.scripts["black"].checkBlackFrame_numba(frame, self.current_mask):
-                    error_text = "Dropout Error" if self.is_realtime else f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    if self.is_realtime:
+                        error_text = f"Dropout Error at {timestamp}"
+                    else:
+                        error_text = f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                     self.update_log(error_text, "red")
             else:
                 if self.scripts["black"].checkBlackFrame_numba(frame, self.current_mask):
-                    error_text = "Dropout Error" if self.is_realtime else f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    if self.is_realtime:
+                        error_text = f"Dropout Error at {timestamp}"
+                    else:
+                        error_text = f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                     self.update_log(error_text, "red")
 
         #if "highlights" in self.scripts and self.scripts["highlights"]:
@@ -607,7 +626,10 @@ class VideoPlayer:
                 if sum(frozen_frame_buffer) > 4:
                     # print(f"Frozen Frame Error Detected at {round((currentFrame/self.fps), 4):.2f}s (More than 4 in the last {window_size} frames)")
                     # error_text = f"Frozen Frame Error at {round((currentFrame/self.fps), 4):.2f}s and frame: {currentFrame}"
-                    error_text = "Frozen Frame" if self.is_realtime else f"Frozen Frame Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    if self.is_realtime:
+                        error_text = f"Frozen Frame at {timestamp}"
+                    else:
+                        error_text = f"Frozen Frame Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                     self.update_log(error_text, "red")
                     #error_frame = frame.copy()
                     #error_counter = error_duration
@@ -624,8 +646,10 @@ class VideoPlayer:
         if "pano" in self.scripts and self.scripts["pano"]:
             if self.scripts["pano"].repeated_region_numpy(frame):
                 #error_text = f"Pano-70 (repeated region) Error at {round((currentFrame/self.fps), 4)}s and frame: {currentFrame}"
-                error_text = "Pano-70 Error" if self.is_realtime else f"Pano-70 Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
-
+                if self.is_realtime:
+                    error_text = f"Pano-70 Error at {timestamp}"
+                else:
+                    error_text = f"Pano-70 Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 # print(f"Pano-70 (repeated region) Error at {round((currentFrame/self.fps), 4)}s and frame: {currentFrame}")
                 #error_frame = frame.copy()
                 #error_counter = error_duration
