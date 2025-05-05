@@ -461,7 +461,7 @@ class VideoPlayer:
             
             if ret:
                 #print("DEBUG: frame read successfully")
-                frame = cv2.resize(frame, (640, 480))
+                frame = cv2.resize(frame, (640, 480), interpolation = cv2.INTER_LINEAR)
                 if hasattr(self, 'masking') and self.masking.is_running():
                     self.current_mask = self.masking.update(frame)
                 self.detect_and_display_errors(frame)
@@ -537,22 +537,31 @@ class VideoPlayer:
 
         # Use dynamically loaded modules
         if "green" in self.scripts and self.scripts["green"]:
-            if self.scripts["green"].checkGreenFrame(frame):
+            print(self.scripts["green"].checkGreenFrame_numba(frame))
+            #if self.scripts["green"].checkGreenFrame_numba(frame) == 1:
+            #    error_text = "Green Screen Error" if self.is_realtime else f"Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+            #    self.update_log(error_text, "red")
+
+            if self.scripts["green"].checkGreenFrame_numba(frame) == 1:
+                error_text = "Green Screen Error" if self.is_realtime else f"Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                self.update_log(error_text, "red")
+
+            if self.scripts["green"].checkGreenFrame_numba(frame) == 2:
                 error_text = "Green Screen Error" if self.is_realtime else f"Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 self.update_log(error_text, "red")
 
         if "magenta" in self.scripts and self.scripts["magenta"]:
-            if self.scripts["magenta"].checkMagentaFrame(frame):
+            if self.scripts["magenta"].checkMagentaFrame_numba(frame):
                 error_text = "Magenta Screen Error" if self.is_realtime else f"Magenta Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 self.update_log(error_text, "red")
 
         if "black" in self.scripts and self.scripts["black"]:
             if mask_applied:
-                if self.scripts["black"].checkBlackFrame(frame):
+                if self.scripts["black"].checkBlackFrame_numba(frame, self.current_mask):
                     error_text = "Dropout Error" if self.is_realtime else f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                     self.update_log(error_text, "red")
             else:
-                if self.scripts["black"].checkBlackFrame(frame, self.current_mask):
+                if self.scripts["black"].checkBlackFrame_numba(frame, self.current_mask):
                     error_text = "Dropout Error" if self.is_realtime else f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                     self.update_log(error_text, "red")
 
