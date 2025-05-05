@@ -88,6 +88,8 @@ class RealTimeMasking:
         self.keypresg = False
         self.shrunk_mode = False
         self.running = True # Flag to control the loop
+        self.raw_mode = False  # If True, masking and overlays are skipped
+
 
         _, self.curr_frame = self.cap.read()
         self.lmask = self.scripts["mask"].create_mask(self.curr_frame)
@@ -98,12 +100,49 @@ class RealTimeMasking:
     def is_running(self):
         return self.running
 
+    def show_controls_window(self):
+        help_img = np.ones((200, 400, 3), dtype=np.uint8) * 255  # White background
+        font = cv2.FONT_HERSHEY_SIMPLEX
+
+        instructions = [
+            "Controls:",
+            "'s' - Shrink Mask",
+            "'g' - Grow Mask",
+            "'r' - Toggle Raw Video",
+            "'k' - Confirm/Exit",
+        ]
+
+        for i, line in enumerate(instructions):
+            cv2.putText(help_img, line, (10, 30 + i * 30), font, 0.6, (0, 0, 0), 1, cv2.LINE_AA)
+
+        cv2.imshow("Controls", help_img)
+
+
     def update(self, frame):
         if not self.running:
             return None
     
         self.curr_frame = frame
         self.frame_counter += 1
+
+        self.show_controls_window()
+
+        # Raw video mode toggle
+        if keyboard.is_pressed('r'):
+            self.raw_mode = not self.raw_mode
+            print("Raw mode:", "ON" if self.raw_mode else "OFF")
+            time.sleep(0.3)
+
+        if self.raw_mode:
+            cv2.imshow("Footage Mask", self.curr_frame)
+            cv2.imshow("Pano-70 Mask", self.curr_frame)
+            if cv2.waitKey(1) & 0xFF == ord('k') or keyboard.is_pressed('k'):
+                print("Raw mode active. Exiting mask preview.")
+                self.running = False
+                cv2.destroyAllWindows()
+            # Return dummy zero mask to avoid Numba crash
+            dummy_mask = np.zeros(self.curr_frame.shape[:2], dtype=np.uint8)
+            return dummy_mask
 
         # Update mask every 10 frames if 'k' not pressed
         if not keyboard.is_pressed('k'):
@@ -585,8 +624,8 @@ class VideoPlayer:
                 self.update_log(error_text, "red")
 
         if "black" in self.scripts and self.scripts["black"]:
-            if mask_applied:
-                if self.scripts["black"].checkBlackFrame_numba(frame, self.current_mask):
+            if self.masking.raw_mode:
+                if self.scripts["black"].checkDropoutNoMask(frame):
                     if self.is_realtime:
                         error_text = f"Dropout Error at {timestamp}"
                     else:
