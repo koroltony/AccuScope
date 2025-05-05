@@ -17,7 +17,7 @@ A Python GUI tool for video playback with real-time and file-based error detecti
 1. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/yourusername/ece188a-arthrex.git
+   git clone https://github.com/.../ece188a-arthrex.git
    cd ece188a-arthrex
    ```
 
@@ -39,10 +39,24 @@ A Python GUI tool for video playback with real-time and file-based error detecti
 ## Requirements
 
 * Python 3.7+
-* OpenCV
-* Pillow
-* Fabric (for remote SSH functionality)
-* Tkinter (comes with most Python installations)
+
+* opencv-python — for video handling
+
+* numpy — numerical computation
+
+* matplotlib — plotting
+
+* Pillow — image conversion for Tkinter
+
+* scikit-image — image processing
+
+* scipy — signal processing
+
+* numba — performance optimization
+
+* fabric — remote command execution
+
+* keyboard — keypress detection
 
 ---
 
