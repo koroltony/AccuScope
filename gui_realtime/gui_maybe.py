@@ -396,6 +396,12 @@ class VideoPlayer:
 
             self.start_time = time.time()  # Post-processing does not need real-time tracking
             self.fps = self.cap.get(cv2.CAP_PROP_FPS)
+            
+            # Precompile numba code for fast execution:
+                
+            _ = self.scripts["black"].checkBlackFrame_numba(initial_frame,lmask)
+            _ = self.scripts["green"].checkGreenFrame_numba(initial_frame)
+            _ = self.scripts["magenta"].checkMagentaFrame_numba(initial_frame)
 
             file_name = os.path.basename(self.file_path)  # Extract just the file name
             self.update_status("Video is currently playing.", "Calculating...", "green")
@@ -427,6 +433,10 @@ class VideoPlayer:
             #print("DEBUG: releasing previous video capture")
             self.cap.release()
             self.cap = None  # Reset to avoid stale reference
+            
+        '''
+        Need to change to generalize for all users (cycle between 0-2)
+        '''
         
         self.cap = cv2.VideoCapture(0)
 
@@ -525,11 +535,17 @@ class VideoPlayer:
 
 
     def detect_and_display_errors(self, frame):
+        
+        '''
+        Masking the entire footage is unnecessary, we only mask for dropout
+        
         if hasattr(self, 'current_mask') and self.current_mask is not None:
             frame = cv2.bitwise_and(frame, frame, mask=self.current_mask)
             mask_applied = True
         else:
             mask_applied = False
+        '''
+        mask_applied = False
 
         with self.lock:
             error_text = "No Error"
@@ -537,17 +553,17 @@ class VideoPlayer:
 
         # Use dynamically loaded modules
         if "green" in self.scripts and self.scripts["green"]:
-            print(self.scripts["green"].checkGreenFrame_numba(frame))
+            
             #if self.scripts["green"].checkGreenFrame_numba(frame) == 1:
             #    error_text = "Green Screen Error" if self.is_realtime else f"Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
             #    self.update_log(error_text, "red")
 
             if self.scripts["green"].checkGreenFrame_numba(frame) == 1:
-                error_text = "Green Screen Error" if self.is_realtime else f"Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                error_text = "Full Green Screen Error" if self.is_realtime else f"Full Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 self.update_log(error_text, "red")
 
             if self.scripts["green"].checkGreenFrame_numba(frame) == 2:
-                error_text = "Green Screen Error" if self.is_realtime else f"Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                error_text = "Corner Green Screen Error" if self.is_realtime else f"Corner Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 self.update_log(error_text, "red")
 
         if "magenta" in self.scripts and self.scripts["magenta"]:
