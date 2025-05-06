@@ -535,7 +535,7 @@ class VideoPlayer:
 
         self.play_flag = True  # Make sure this is set before looping
         self.start_time = time.time()
-        self.fps = 30  # Approximate real-time FPS
+        self.fps = 60  # Approximate real-time FPS
         #print("DEBUG: webcam opened successfully")
         self.update_status("Real-time video is currently playing.", "green")
         
