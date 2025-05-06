@@ -52,6 +52,7 @@ def load_error_detection_scripts(is_realtime=False):
 
 import threading
 import cv2
+
 import numpy as np
 import time
 import matplotlib.pyplot as plt
