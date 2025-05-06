@@ -89,7 +89,7 @@ class RealTimeMasking:
         self.scripts = scripts
         self.kernel = np.ones((3, 3), np.uint8)
         self.frame_counter = 0
-        self.update_interval = 10
+        self.update_interval = 1
         self.keypress = False
         self.keypresg = False
         self.shrunk_mode = False
