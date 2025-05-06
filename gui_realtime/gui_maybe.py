@@ -124,7 +124,7 @@ class RealTimeMasking:
         cv2.imshow("Controls", help_img)
 
 
-    def update(self, frame, footage_label=None, pano_label=None):
+    def update(self, frame, footage_label=None):
         if not self.running:
             return None
     
@@ -141,17 +141,16 @@ class RealTimeMasking:
 
         if self.raw_mode:
             
-            # Making Masks show up in tKinter
-            if footage_label is not None and pano_label is not None:
-                # Make footage mask viewable (grayscale to RGB)
-                tk_footage = cv2_to_tk(self.curr_frame)  
-                footage_label.configure(image=tk_footage)
-                footage_label.image = tk_footage  # Prevent garbage collection
+            if footage_label is not None:
+
+                combined = np.hstack((self.curr_frame, self.curr_frame))  # Side-by-side
             
-                # Display pano-70 mask (usually RGB already)
-                tk_pano = cv2_to_tk(self.curr_frame)
-                pano_label.configure(image=tk_pano)
-                pano_label.image = tk_pano
+                # Convert to PhotoImage
+                tk_combined = cv2_to_tk(combined)
+            
+                # Show in single label
+                footage_label.configure(image=tk_combined)
+                footage_label.image = tk_combined
                 
             if cv2.waitKey(1) & 0xFF == ord('k') or keyboard.is_pressed('k'):
                 print("Raw mode active. Exiting mask preview.")
@@ -200,17 +199,17 @@ class RealTimeMasking:
         pano_green = (pano_green * 0.3).astype(np.uint8)
         pano_overlay = cv2.addWeighted(pano_green, 0.5, self.edges_red, 1.0, 0)
         
-        # OPTIONAL: Also show in Tkinter GUI (non-destructive)
-        if footage_label is not None and pano_label is not None:
-            # Make footage mask viewable (grayscale to RGB)
-            tk_footage = cv2_to_tk(cv2.merge([self.lmask] * 3))  
-            footage_label.configure(image=tk_footage)
-            footage_label.image = tk_footage  # Prevent garbage collection
+        if footage_label is not None:
+            # Convert both masks to RGB
+            mask_rgb = cv2.merge([self.lmask] * 3)
+            combined = np.hstack((mask_rgb, pano_overlay))  # Side-by-side
         
-            # Display pano-70 mask (usually RGB already)
-            tk_pano = cv2_to_tk(pano_overlay)
-            pano_label.configure(image=tk_pano)
-            pano_label.image = tk_pano
+            # Convert to PhotoImage
+            tk_combined = cv2_to_tk(combined)
+        
+            # Show in single label
+            footage_label.configure(image=tk_combined)
+            footage_label.image = tk_combined
 
         # Exit when 'k' is clicked
         if cv2.waitKey(1) & 0xFF == ord('k') or keyboard.is_pressed('k'):
@@ -220,8 +219,6 @@ class RealTimeMasking:
             # Remove GUI preview images
             if footage_label:
                 footage_label.destroy()
-            if pano_label:
-                pano_label.destroy()
             
             return self.shrunk_mask
         
@@ -297,10 +294,8 @@ class VideoPlayer:
         self.status_label.grid(row=1, column=3, padx=5, pady=5)
         
         self.footage_mask_label = tk.Label(root)
-        self.footage_mask_label.grid(row=2, column=3, padx=5, pady=5)
-        
-        self.pano_mask_label = tk.Label(root)
-        self.pano_mask_label.grid(row=2, column=4, padx=5, pady=5)
+        self.footage_mask_label.grid(row=2, column=3, padx=0, pady=0)
+    
 
         self.cap = None
         self.image_on_canvas = None
@@ -556,7 +551,7 @@ class VideoPlayer:
                 #print("DEBUG: frame read successfully")
                 frame = cv2.resize(frame, (640, 480), interpolation = cv2.INTER_LINEAR)
                 if hasattr(self, 'masking') and self.masking.is_running():
-                    self.current_mask = self.masking.update(frame, self.footage_mask_label, self.pano_mask_label)
+                    self.current_mask = self.masking.update(frame, self.footage_mask_label)
                 self.detect_and_display_errors(frame)
 
                 '''
