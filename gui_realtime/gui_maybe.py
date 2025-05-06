@@ -62,6 +62,11 @@ from tkinter import Tk, Canvas, Text, Button, Label, Entry, StringVar, END
 from skimage import measure
 from skimage.draw import disk
 
+def cv2_to_tk(img, scale=0.6):
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, (0, 0), fx=scale, fy=scale)
+    return ImageTk.PhotoImage(Image.fromarray(img))
+
 # Import the error detection scripts
 '''
 from greenScripts.greenVectorizedSolution import checkGreenFrame
@@ -119,7 +124,7 @@ class RealTimeMasking:
         cv2.imshow("Controls", help_img)
 
 
-    def update(self, frame):
+    def update(self, frame, footage_label=None, pano_label=None):
         if not self.running:
             return None
     
@@ -135,12 +140,22 @@ class RealTimeMasking:
             time.sleep(0.3)
 
         if self.raw_mode:
-            cv2.imshow("Footage Mask", self.curr_frame)
-            cv2.imshow("Pano-70 Mask", self.curr_frame)
+            
+            # Making Masks show up in tKinter
+            if footage_label is not None and pano_label is not None:
+                # Make footage mask viewable (grayscale to RGB)
+                tk_footage = cv2_to_tk(self.curr_frame)  
+                footage_label.configure(image=tk_footage)
+                footage_label.image = tk_footage  # Prevent garbage collection
+            
+                # Display pano-70 mask (usually RGB already)
+                tk_pano = cv2_to_tk(self.curr_frame)
+                pano_label.configure(image=tk_pano)
+                pano_label.image = tk_pano
+                
             if cv2.waitKey(1) & 0xFF == ord('k') or keyboard.is_pressed('k'):
                 print("Raw mode active. Exiting mask preview.")
                 self.running = False
-                cv2.destroyAllWindows()
             # Return dummy zero mask to avoid Numba crash
             dummy_mask = np.zeros(self.curr_frame.shape[:2], dtype=np.uint8)
             return dummy_mask
@@ -184,16 +199,31 @@ class RealTimeMasking:
         ])
         pano_green = (pano_green * 0.3).astype(np.uint8)
         pano_overlay = cv2.addWeighted(pano_green, 0.5, self.edges_red, 1.0, 0)
-
-        # Show windows
-        cv2.imshow("Footage Mask", self.lmask)
-        cv2.imshow("Pano-70 Mask", pano_overlay)
+        
+        # OPTIONAL: Also show in Tkinter GUI (non-destructive)
+        if footage_label is not None and pano_label is not None:
+            # Make footage mask viewable (grayscale to RGB)
+            tk_footage = cv2_to_tk(cv2.merge([self.lmask] * 3))  
+            footage_label.configure(image=tk_footage)
+            footage_label.image = tk_footage  # Prevent garbage collection
+        
+            # Display pano-70 mask (usually RGB already)
+            tk_pano = cv2_to_tk(pano_overlay)
+            pano_label.configure(image=tk_pano)
+            pano_label.image = tk_pano
 
         # Exit when 'k' is clicked
         if cv2.waitKey(1) & 0xFF == ord('k') or keyboard.is_pressed('k'):
             print("Both masks set.")
             self.running = False  # Set the flag to False to exit the loop
-            cv2.destroyAllWindows()  # Close all OpenCV windows
+            
+            # Remove GUI preview images
+            if footage_label:
+                footage_label.destroy()
+            if pano_label:
+                pano_label.destroy()
+            
+            return self.shrunk_mask
         
         return self.shrunk_mask
 
@@ -215,7 +245,7 @@ class VideoPlayer:
 
         # Create and place the error log
         #self.error_log = tk.Text(root, height=30, width=40)
-        self.error_log = tk.Text(root, height = 30)
+        self.error_log = tk.Text(root, height = 20)
         self.error_log.grid(row=0, column=3, sticky = 'ne', padx=5, pady=5)
 
         root.grid_columnconfigure(3, weight=2)
@@ -264,7 +294,13 @@ class VideoPlayer:
 
         # Create and place the status label
         self.status_label = tk.Label(root, text="No video detected.\nRemaining time: N/A", fg="red")
-        self.status_label.grid(row=2, column=3, padx=5, pady=5)
+        self.status_label.grid(row=1, column=3, padx=5, pady=5)
+        
+        self.footage_mask_label = tk.Label(root)
+        self.footage_mask_label.grid(row=2, column=3, padx=5, pady=5)
+        
+        self.pano_mask_label = tk.Label(root)
+        self.pano_mask_label.grid(row=2, column=4, padx=5, pady=5)
 
         self.cap = None
         self.image_on_canvas = None
@@ -520,7 +556,7 @@ class VideoPlayer:
                 #print("DEBUG: frame read successfully")
                 frame = cv2.resize(frame, (640, 480), interpolation = cv2.INTER_LINEAR)
                 if hasattr(self, 'masking') and self.masking.is_running():
-                    self.current_mask = self.masking.update(frame)
+                    self.current_mask = self.masking.update(frame, self.footage_mask_label, self.pano_mask_label)
                 self.detect_and_display_errors(frame)
 
                 '''
