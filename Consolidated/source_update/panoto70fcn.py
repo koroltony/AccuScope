@@ -141,9 +141,6 @@ def repeated_region_numpy(frame):
         # Get peak indices
         peak_len = find_peaks_numpy(autocorr_log, window=20)
         
-        if peak_len >= 5:
-            print(np.mean(region_avg))
-    
         return peak_len >= 5
 
 # -------------------- Scipy Implementation -----------------------------------

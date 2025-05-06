@@ -202,6 +202,7 @@ class VideoPlayer:
         self.root = root
         self.root.title("Video Player")
         self.root.geometry("1000x660")
+        self.source = 0
 
         self.lock = threading.Lock()
         self.is_realtime = False  # Flag to track real-time mode
@@ -246,6 +247,9 @@ class VideoPlayer:
 
         self.open_logs_button = tk.Button(root, text="Open System Logs", command=self.open_system_logs)
         self.open_logs_button.grid(row=2, column=2, padx=5, pady=5)
+        
+        self.toggle_camera_button = tk.Button(root,text="Toggle Camera Source",command = self.toggle_camera)
+        self.toggle_camera_button.grid(row=4,column=0,padx=5,pady=5)
 
 
         # Create and place the threshold controls
@@ -319,7 +323,13 @@ class VideoPlayer:
             self.status_label.config(text="system_logs.txt not found.", fg="red")
         except Exception as e:
             self.status_label.config(text=f"Error opening logs: {e}", fg="red")
-
+            
+        
+    def toggle_camera(self):
+        sources = [0, 1, 2]
+        
+        self.source = (self.source + 1) % len(sources)
+        self.cap = cv2.VideoCapture(self.source)
 
 
     def on_close(self):
@@ -473,12 +483,8 @@ class VideoPlayer:
             #print("DEBUG: releasing previous video capture")
             self.cap.release()
             self.cap = None  # Reset to avoid stale reference
-            
-        '''
-        Need to change to generalize for all users (cycle between 0-2)
-        '''
         
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(self.source)
 
         if not self.cap or not self.cap.isOpened():
             self.cap = None
@@ -537,7 +543,18 @@ class VideoPlayer:
 
                 # Update the progress bar and check if the video is playing in real time
                 current_time = self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
-                total_time = self.cap.get(cv2.CAP_PROP_FRAME_COUNT) / self.cap.get(cv2.CAP_PROP_FPS)
+                
+                # Make sure toggling the camera does not mess up the post-processing timestamp code
+                try:
+                    total_time = self.cap.get(cv2.CAP_PROP_FRAME_COUNT) / self.cap.get(cv2.CAP_PROP_FPS)
+                
+                except ZeroDivisionError:
+                    if self.cap is not None:
+                        self.cap.release()
+                    self.source = 0
+                    self.cap = cv2.VideoCapture(self.source)
+                    total_time = 1
+                    
                 self.progress_bar['value'] = (current_time / total_time) * 100
                 self.progress_label.config(text=f"{int(current_time//60)}:{int(current_time%60):02d} / {int(total_time//60)}:{int(total_time%60):02d}")
 
