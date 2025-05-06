@@ -3,6 +3,7 @@ import os
 import tkinter as tk
 import keyboard
 import subprocess
+from datetime import datetime
 
 # Add the error detection folder to sys.path by going back to the parent directory 
 #parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..')) 
@@ -87,6 +88,8 @@ class RealTimeMasking:
         self.keypresg = False
         self.shrunk_mode = False
         self.running = True # Flag to control the loop
+        self.raw_mode = False  # If True, masking and overlays are skipped
+
 
         _, self.curr_frame = self.cap.read()
         self.lmask = self.scripts["mask"].create_mask(self.curr_frame)
@@ -97,12 +100,49 @@ class RealTimeMasking:
     def is_running(self):
         return self.running
 
+    def show_controls_window(self):
+        help_img = np.ones((200, 400, 3), dtype=np.uint8) * 255  # White background
+        font = cv2.FONT_HERSHEY_SIMPLEX
+
+        instructions = [
+            "Controls:",
+            "'s' - Shrink Mask",
+            "'g' - Grow Mask",
+            "'r' - Toggle Raw Video",
+            "'k' - Confirm/Exit",
+        ]
+
+        for i, line in enumerate(instructions):
+            cv2.putText(help_img, line, (10, 30 + i * 30), font, 0.6, (0, 0, 0), 1, cv2.LINE_AA)
+
+        cv2.imshow("Controls", help_img)
+
+
     def update(self, frame):
         if not self.running:
             return None
     
         self.curr_frame = frame
         self.frame_counter += 1
+
+        self.show_controls_window()
+
+        # Raw video mode toggle
+        if keyboard.is_pressed('r'):
+            self.raw_mode = not self.raw_mode
+            print("Raw mode:", "ON" if self.raw_mode else "OFF")
+            time.sleep(0.3)
+
+        if self.raw_mode:
+            cv2.imshow("Footage Mask", self.curr_frame)
+            cv2.imshow("Pano-70 Mask", self.curr_frame)
+            if cv2.waitKey(1) & 0xFF == ord('k') or keyboard.is_pressed('k'):
+                print("Raw mode active. Exiting mask preview.")
+                self.running = False
+                cv2.destroyAllWindows()
+            # Return dummy zero mask to avoid Numba crash
+            dummy_mask = np.zeros(self.curr_frame.shape[:2], dtype=np.uint8)
+            return dummy_mask
 
         # Update mask every 10 frames if 'k' not pressed
         if not keyboard.is_pressed('k'):
@@ -551,6 +591,8 @@ class VideoPlayer:
             error_text = "No Error"
             currentFrame = self.cap.get(cv2.CAP_PROP_POS_FRAMES)
 
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # e.g., 2025-05-05 14:32:21.123
+
         # Use dynamically loaded modules
         if "green" in self.scripts and self.scripts["green"]:
             
@@ -559,26 +601,42 @@ class VideoPlayer:
             #    self.update_log(error_text, "red")
 
             if self.scripts["green"].checkGreenFrame_numba(frame) == 1:
-                error_text = "Full Green Screen Error" if self.is_realtime else f"Full Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                if self.is_realtime:
+                    error_text = f"Full Green Screen Error at {timestamp}"
+                else:
+                    error_text = f"Full Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 self.update_log(error_text, "red")
 
+
             if self.scripts["green"].checkGreenFrame_numba(frame) == 2:
-                error_text = "Corner Green Screen Error" if self.is_realtime else f"Corner Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                if self.is_realtime:
+                    error_text = f"Corner Green Screen Error at {timestamp}"
+                else:
+                    error_text = f"Corner Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 self.update_log(error_text, "red")
 
         if "magenta" in self.scripts and self.scripts["magenta"]:
             if self.scripts["magenta"].checkMagentaFrame_numba(frame):
-                error_text = "Magenta Screen Error" if self.is_realtime else f"Magenta Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                if self.is_realtime:
+                    error_text = f"Magenta Screen Error at {timestamp}"
+                else:
+                    error_text = f"Magenta Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 self.update_log(error_text, "red")
 
         if "black" in self.scripts and self.scripts["black"]:
-            if mask_applied:
-                if self.scripts["black"].checkBlackFrame_numba(frame, self.current_mask):
-                    error_text = "Dropout Error" if self.is_realtime else f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+            if self.masking.raw_mode:
+                if self.scripts["black"].checkDropoutNoMask(frame):
+                    if self.is_realtime:
+                        error_text = f"Dropout Error at {timestamp}"
+                    else:
+                        error_text = f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                     self.update_log(error_text, "red")
             else:
                 if self.scripts["black"].checkBlackFrame_numba(frame, self.current_mask):
-                    error_text = "Dropout Error" if self.is_realtime else f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    if self.is_realtime:
+                        error_text = f"Dropout Error at {timestamp}"
+                    else:
+                        error_text = f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                     self.update_log(error_text, "red")
 
         #if "highlights" in self.scripts and self.scripts["highlights"]:
@@ -607,7 +665,10 @@ class VideoPlayer:
                 if sum(frozen_frame_buffer) > 4:
                     # print(f"Frozen Frame Error Detected at {round((currentFrame/self.fps), 4):.2f}s (More than 4 in the last {window_size} frames)")
                     # error_text = f"Frozen Frame Error at {round((currentFrame/self.fps), 4):.2f}s and frame: {currentFrame}"
-                    error_text = "Frozen Frame" if self.is_realtime else f"Frozen Frame Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    if self.is_realtime:
+                        error_text = f"Frozen Frame at {timestamp}"
+                    else:
+                        error_text = f"Frozen Frame Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                     self.update_log(error_text, "red")
                     #error_frame = frame.copy()
                     #error_counter = error_duration
@@ -624,8 +685,10 @@ class VideoPlayer:
         if "pano" in self.scripts and self.scripts["pano"]:
             if self.scripts["pano"].repeated_region_numpy(frame):
                 #error_text = f"Pano-70 (repeated region) Error at {round((currentFrame/self.fps), 4)}s and frame: {currentFrame}"
-                error_text = "Pano-70 Error" if self.is_realtime else f"Pano-70 Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
-
+                if self.is_realtime:
+                    error_text = f"Pano-70 Error at {timestamp}"
+                else:
+                    error_text = f"Pano-70 Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 # print(f"Pano-70 (repeated region) Error at {round((currentFrame/self.fps), 4)}s and frame: {currentFrame}")
                 #error_frame = frame.copy()
                 #error_counter = error_duration

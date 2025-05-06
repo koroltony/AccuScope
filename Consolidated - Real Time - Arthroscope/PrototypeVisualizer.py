@@ -38,7 +38,7 @@ frozen_frame_flags = []
 # OBS is 2
 # Built in Camera is 1
 
-video = cv2.VideoCapture(2)
+video = cv2.VideoCapture(1)
 
 # Set the MJPG codec
 

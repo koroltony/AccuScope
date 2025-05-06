@@ -129,15 +129,22 @@ def repeated_region_numpy(frame):
     img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     center = img.shape[1] // 2
     region_avg = np.mean(img[20:400, center - 5:center + 5], axis=1)
-    norm = (region_avg - np.mean(region_avg)) / (np.std(region_avg) or 1)
-    autocorr = np.correlate(norm, norm, mode='full')[len(norm)-1:]
-    autocorr /= np.max(autocorr) or 1
-    autocorr_log = np.log1p(np.abs(autocorr))
-
-    # Get peak indices
-    peak_len = find_peaks_numpy(autocorr_log, window=20)
-
-    return peak_len >= 5
+    
+    # Ignore super dark frames where normalization might amplify noise
+    
+    if np.mean(region_avg) >= 1:
+        norm = (region_avg - np.mean(region_avg)) / (np.std(region_avg) or 1)
+        autocorr = np.correlate(norm, norm, mode='full')[len(norm)-1:]
+        autocorr /= np.max(autocorr) or 1
+        autocorr_log = np.log1p(np.abs(autocorr))
+    
+        # Get peak indices
+        peak_len = find_peaks_numpy(autocorr_log, window=20)
+        
+        if peak_len >= 5:
+            print(np.mean(region_avg))
+    
+        return peak_len >= 5
 
 # -------------------- Scipy Implementation -----------------------------------
 

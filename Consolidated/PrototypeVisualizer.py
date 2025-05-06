@@ -17,8 +17,8 @@ from source_update.menuDetect import hasMenu
 # Get video path:
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-video_path = "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated/source_update/stitched_test_video.mp4"
-#video_path = "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo194.mp4"
+#video_path = "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated/source_update/stitched_test_video.mp4"
+video_path = "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo194.mp4"
 
 
 codeStart = time.time()

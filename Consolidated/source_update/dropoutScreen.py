@@ -2,11 +2,11 @@ import cv2
 import numpy as np
 from numba import njit
 
-def checkBlackFrame(frame,mask = None):
+def checkBlackFrame(frame,mask):
 
     # Create mask for footage
-    if mask is not None:
-        frame = cv2.bitwise_and(frame, frame, mask=mask)
+
+    frame = cv2.bitwise_and(frame, frame, mask=mask)
 
     Black_condition = ~np.any((frame[:, :, 2] > 20) & (frame[:, :, 1] > 20) & (frame[:, :, 0] > 20))
 
@@ -29,3 +29,18 @@ def checkBlackFrame_numba(frame, mask):
                     return 0
     return 1
     
+@njit
+def checkDropoutNoMask(frame):
+    height, width, _ = frame.shape
+    black_pixel_count = 0
+    threshold = 30  # below this is considered "black"
+    for i in range(height):
+        for j in range(width):
+            pixel = frame[i, j]
+            if pixel[0] < threshold and pixel[1] < threshold and pixel[2] < threshold:
+                black_pixel_count += 1
+    
+    total_pixels = height * width
+    if black_pixel_count / total_pixels > 0.9:
+        return True  # Dropout
+    return False

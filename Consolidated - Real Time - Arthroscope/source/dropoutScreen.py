@@ -29,3 +29,18 @@ def checkBlackFrame_numba(frame, mask):
                     return 0
     return 1
     
+@njit
+def checkDropoutNoMask(frame):
+    height, width, _ = frame.shape
+    black_pixel_count = 0
+    threshold = 30  # below this is considered "black"
+    for i in range(height):
+        for j in range(width):
+            pixel = frame[i, j]
+            if pixel[0] < threshold and pixel[1] < threshold and pixel[2] < threshold:
+                black_pixel_count += 1
+    
+    total_pixels = height * width
+    if black_pixel_count / total_pixels > 0.9:
+        return True  # Dropout
+    return False
