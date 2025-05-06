@@ -43,4 +43,8 @@ def checkDropoutNoMask(frame):
     total_pixels = height * width
     if black_pixel_count / total_pixels > 0.9:
         return True  # Dropout
+<<<<<<< HEAD
     return False
+=======
+    return False
+>>>>>>> 8ba35549fe810fd118bf3749bb11a73958b241fe

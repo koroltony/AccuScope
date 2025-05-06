@@ -2,11 +2,11 @@ import cv2
 import numpy as np
 from numba import njit
 
-def checkBlackFrame(frame,mask):
+def checkBlackFrame(frame,mask = None):
 
     # Create mask for footage
-
-    frame = cv2.bitwise_and(frame, frame, mask=mask)
+    if mask is not None:
+        frame = cv2.bitwise_and(frame, frame, mask=mask)
 
     Black_condition = ~np.any((frame[:, :, 2] > 20) & (frame[:, :, 1] > 20) & (frame[:, :, 0] > 20))
 
