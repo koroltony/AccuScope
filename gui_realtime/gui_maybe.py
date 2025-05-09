@@ -360,8 +360,21 @@ class VideoPlayer:
     def toggle_camera(self):
         sources = [0, 1, 2]
         
+        # Repeatedly try sources until one works:
+            
+        self.cap = cv2.VideoCapture(self.source)
+        
         self.source = (self.source + 1) % len(sources)
         self.cap = cv2.VideoCapture(self.source)
+        
+        while True:
+            
+            if self.cap.get(cv2.CAP_PROP_FPS) == 0:
+                print(self.source)
+                self.source = (self.source + 1) % len(sources)
+                self.cap = cv2.VideoCapture(self.source)
+            else:
+                break
 
 
     def on_close(self):
@@ -576,16 +589,7 @@ class VideoPlayer:
                 # Update the progress bar and check if the video is playing in real time
                 current_time = self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
                 
-                # Make sure toggling the camera does not mess up the post-processing timestamp code
-                try:
-                    total_time = self.cap.get(cv2.CAP_PROP_FRAME_COUNT) / self.cap.get(cv2.CAP_PROP_FPS)
-                
-                except ZeroDivisionError:
-                    if self.cap is not None:
-                        self.cap.release()
-                    self.source = 0
-                    self.cap = cv2.VideoCapture(self.source)
-                    total_time = 1
+                total_time = self.cap.get(cv2.CAP_PROP_FRAME_COUNT) / self.cap.get(cv2.CAP_PROP_FPS)
                     
                 self.progress_bar['value'] = (current_time / total_time) * 100
                 self.progress_label.config(text=f"{int(current_time//60)}:{int(current_time%60):02d} / {int(total_time//60)}:{int(total_time%60):02d}")
