@@ -26,7 +26,7 @@ def repeated_region(frame):
 
     height, width = img.shape
     center = width // 2
-    region_width = 20
+    region_width = 10
     start_col = max(center - region_width // 2, 0)
     end_col = min(center + region_width // 2, width)
 
@@ -89,6 +89,7 @@ def repeated_region_numpy_illustrative(frame):
     region_avg = np.mean(img[20:400, center - 5:center + 5], axis=1)
     norm = (region_avg - np.mean(region_avg)) / (np.std(region_avg) or 1)
     autocorr = np.correlate(norm, norm, mode='full')[len(norm)-1:]
+    #test_max = autocorr.copy()
     autocorr /= np.max(autocorr) or 1
     autocorr_log = np.log1p(np.abs(autocorr))
 
@@ -96,6 +97,7 @@ def repeated_region_numpy_illustrative(frame):
     peak_indices = find_peaks_numpy_illustrative(autocorr_log, window=20)
     
     if len(peak_indices) >= 5:
+        #print(np.min(test_max))
         plt.figure()
         plt.plot(autocorr_log, label='log(autocorr)')
         plt.plot(peak_indices, autocorr_log[peak_indices], 'ro', label='Peaks')
@@ -351,7 +353,7 @@ if __name__ == "__main__":
     auto_corr_array = []
     pix_array = []
 
-    video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo194.mp4")
+    video = cv2.VideoCapture("C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo232.mp4")
     
     if not video.isOpened():
         print("Error: Could not open video.")
@@ -388,7 +390,7 @@ if __name__ == "__main__":
             break
 
         # Test Pano-to-70 method:
-        detected_error = repeated_region_numba(frame)
+        detected_error = repeated_region_numpy_illustrative(frame)
 
         # When detected, display error:
         if detected_error:
