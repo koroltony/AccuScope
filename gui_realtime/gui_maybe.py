@@ -367,6 +367,8 @@ class VideoPlayer:
         self.source = (self.source + 1) % len(sources)
         self.cap = cv2.VideoCapture(self.source)
         
+        # Check the FPS to see if it is a valid source (0 is not valid)
+        
         while True:
             
             if self.cap.get(cv2.CAP_PROP_FPS) == 0:
@@ -677,7 +679,7 @@ class VideoPlayer:
                 self.update_log(error_text, "red")
 
         if "black" in self.scripts and self.scripts["black"]:
-            if self.masking.raw_mode:
+            if getattr(self,'masking',None) and self.masking.raw_mode:
                 if self.scripts["black"].checkDropoutNoMask(frame):
                     if self.is_realtime:
                         error_text = f"Dropout Error at {timestamp}"

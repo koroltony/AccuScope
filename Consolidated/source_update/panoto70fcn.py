@@ -26,7 +26,7 @@ def repeated_region(frame):
 
     height, width = img.shape
     center = width // 2
-    region_width = 10
+    region_width = 20
     start_col = max(center - region_width // 2, 0)
     end_col = min(center + region_width // 2, width)
 
