@@ -97,6 +97,11 @@ class RealTimeMasking:
         self.raw_mode = False  # If True, masking and overlays are skipped
 
 
+        # Inside RealTimeMasking.__init__
+        ret, frame = self.cap.read()
+        if not ret or frame is None or frame.size == 0:
+            raise ValueError("Could not read a valid frame from the camera. Is the virtual camera running?")
+            
         _, self.curr_frame = self.cap.read()
         self.lmask = self.scripts["mask"].create_mask(self.curr_frame)
         self.lmask = self.lmask.astype(np.uint8)
@@ -219,12 +224,110 @@ class RealTimeMasking:
             # Remove GUI preview images
             if footage_label:
                 footage_label.destroy()
+            cv2.destroyAllWindows()
             
             return self.shrunk_mask
         
         return self.shrunk_mask
 
 
+class App(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("Arthroscope Analysis Tool")
+        self.geometry("1000x700")  # Adjust as needed
+
+        # Make grid cells expand with window
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        # Initialize both screens
+        self.start_screen = StartScreen(self)
+        self.video_player = VideoPlayer(self)
+
+        # Place both screens in the same grid
+        self.start_screen.grid(row=0, column=0, sticky="nsew")
+        self.video_player.grid(row=0, column=0, sticky="nsew")
+
+        # Show start screen first
+        self.show_start()
+
+    def show_start(self):
+        self.start_screen.tkraise()
+
+    def show_main(self):
+        self.video_player.tkraise()
+
+class StartScreen(tk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.configure(bg="#1e1e1e")
+
+        # Configure grid for full window expansion
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
+
+        # Internal container to center main content
+        container = tk.Frame(self, bg="#1e1e1e")
+        container.grid(row=0, column=0, sticky="nsew")
+
+        # Load and place the logo at the top
+        try:
+            logo_image = Image.open("newlogoupsacled 2.png")  # Adjust path if needed
+            logo_image = logo_image.resize((490, 200))
+            self.logo_photo = ImageTk.PhotoImage(logo_image)
+
+            logo_label = tk.Label(container, image=self.logo_photo, bg="#1e1e1e")
+            logo_label.pack(pady=(30, 10))
+        except Exception as e:
+            print(f"Error loading logo: {e}")
+
+        # Welcome label under the logo
+        label = tk.Label(container, text="Welcome to the Arthroscope Video Analyzer",
+                        font=("Arial", 20), bg="#1e1e1e", fg="white")
+        label.pack(pady=10)
+
+        # Start Analysis button
+        start_button = tk.Button(container, text="Start Analysis",
+                                font=("Arial", 16), command=master.show_main)
+        start_button.pack(pady=20)
+
+        # Help button in top-right corner of main screen
+        self.help_button = tk.Button(self, text="Help", command=self.open_help_window)
+        self.help_button.grid(row=0, column=1, padx=10, pady=10, sticky="ne")
+
+
+    def open_help_window(self):
+        help_win = tk.Toplevel(self)
+        help_win.title("Help / User Guide")
+        help_win.geometry("500x300")
+
+        help_text = tk.Text(help_win, wrap=tk.WORD, font=("Arial", 11))
+        help_text.insert(tk.END, """
+    Welcome to the Arthroscope Video Analyzer!
+
+    Quick Start:
+    1. Press "Start Analysis" to head to the Main Video Player screen.
+    2(a). Click "Choose File" to begin post processed video detection.
+    2(b). Click "Real-Time" to begin live footage detection.
+    3(a). Click "Play" to analyze the footage. 
+    3(b). Adjust the preview mask as needed if "Real-Time".
+    4. View detected errors in the log panel on the right.
+
+    Extras:
+    - "Toggle Camera" to switch inputs (0, 1, 2).
+    - "Run AutoSSH" to connect to Jetson remotely.
+    - "Open System Logs" to view system performance data.
+
+    Each session creates a 'Case' folder with logs and saved video.
+
+    For full documentation, see: README.md
+    """)
+        help_text.config(state=tk.DISABLED)
+        help_text.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
+
+
+'''
 class VideoPlayer:
     def __init__(self, root):
         self.root = root
@@ -306,13 +409,125 @@ class VideoPlayer:
         self.fps = 0
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+'''
 
+class VideoPlayer(tk.Frame):
+    def __init__(self, master):
+        
+        super().__init__(master)
+        #self.configure(bg="white")
+        self.source = 0
+
+
+        self.canvas = tk.Canvas(self, bg="black")
+        self.canvas.grid(row=0, column=0, columnspan=3, padx=5, pady=5)
+
+        label = tk.Label(self, text="Video Player Placeholder", font=("Arial", 16))
+        label.grid(row=1, column=0, columnspan=3, pady=10)
+
+        self.lock = threading.Lock()
+        self.is_realtime = False
+        self.scripts = load_error_detection_scripts(self.is_realtime)
+
+        # Video playback canvas
+        self.canvas = tk.Canvas(self, bg="black", width=640, height=480)
+        self.canvas.grid(row=0, column=0, columnspan=3, padx=5, pady=5)
+
+        # Error log
+        self.error_log = tk.Text(self, height=20)
+        self.error_log.grid(row=0, column=3, sticky='ne', padx=5, pady=5)
+        self.grid_columnconfigure(3, weight=2)
+
+        # Progress bar and label
+        self.progress_label = tk.Label(self, text="0:00 / 0:00")
+        self.progress_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5)
+        self.progress_bar = ttk.Progressbar(self, orient=tk.HORIZONTAL, length=640, mode='determinate')
+        self.progress_bar.grid(row=1, column=0, columnspan=3, padx=5, pady=5)
+
+        # Buttons
+        self.choose_button = tk.Button(self, text="Choose File", command=self.choose_file)
+        self.choose_button.grid(row=2, column=0, padx=5, pady=5)
+
+        self.realtime_button = tk.Button(self, text="Real-Time", command=self.realtime_video)
+        self.realtime_button.grid(row=3, column=0, padx=5, pady=5)
+
+        self.play_button = tk.Button(self, text="Play", command=self.play_video, state=tk.DISABLED)
+        self.play_button.grid(row=2, column=1, padx=5, pady=5)
+
+        self.reset_button = tk.Button(self, text="Reset", command=self.reset_gui)
+        self.reset_button.grid(row=3, column=1, padx=5, pady=5)
+
+        self.autossh_button = tk.Button(self, text="Run AutoSSH", command=self.run_autossh)
+        self.autossh_button.grid(row=3, column=2, padx=5, pady=5)
+
+        self.open_logs_button = tk.Button(self, text="Open System Logs", command=self.open_system_logs)
+        self.open_logs_button.grid(row=2, column=2, padx=5, pady=5)
+
+        self.toggle_camera_button = tk.Button(self, text="Toggle Camera Source", command=self.toggle_camera)
+        self.toggle_camera_button.grid(row=4, column=0, padx=5, pady=5)
+
+        # Status label
+        self.status_label = tk.Label(self, text="No video detected.\nRemaining time: N/A", fg="red")
+        self.status_label.grid(row=1, column=3, padx=5, pady=5)
+
+        self.footage_mask_label = tk.Label(self)
+        self.footage_mask_label.grid(row=2, column=3, padx=0, pady=0)
+
+        # Internal state
+        self.cap = None
+        self.image_on_canvas = None
+        self.play_flag = False
+        self.file_path = None
+        self.frozen_frame_flags = []
+        self.start_time = None
+        self.fps = 0
+
+        self.case_number, self.timestamp = self.create_new_case_folder()  # Initialize the new case number and timestamp
+        self.case_folder = os.path.join("Cases", f"Case_{self.case_number}_{self.timestamp}")
+        os.makedirs(self.case_folder, exist_ok=True)  # Create the case folder
+
+        # Initialize log files
+        self.error_log_path = os.path.join(self.case_folder, "error_log.txt")
+        self.system_log_path = os.path.join(self.case_folder, "system_log.txt")
+
+        self.master.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def create_new_case_folder(self):
+            # Check if the "cases" folder exists, create if not
+            if not os.path.exists("Cases"):
+                os.makedirs("Cases")
+
+            # Get the highest case number to determine the next available case number
+            case_folders = [d for d in os.listdir("Cases") if os.path.isdir(os.path.join("Cases", d))]
+            case_numbers = [int(folder.split('_')[1]) for folder in case_folders if folder.startswith("Case_")]
+
+            # If there are no case folders yet, start with case 1
+            if case_numbers:
+                new_case_number = max(case_numbers) + 1
+            else:
+                new_case_number = 1
+            
+            # Get the current timestamp in the format "YYYYMMDD_HHMMSS"
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            return new_case_number, timestamp
+
+    def create_log_files(self):
+            # Create or reset the error and system log files inside the case folder
+            with open(self.error_log_path, 'w') as f:
+                f.write(f"Error Log for case {self.case_number}\n")
+            with open(self.system_log_path, 'w') as f:
+                f.write(f"System Log for case {self.case_number}\n")
 
     def run_autossh(self):
         try:
-            ip = simpledialog.askstring("SSH IP", "Enter the remote IP address:", parent = self.root)
+            """ip = simpledialog.askstring("SSH IP", "Enter the remote IP address:", parent = self.root)
             username = simpledialog.askstring("SSH Username", "Enter the username:", parent = self.root)
-            password = simpledialog.askstring("SSH Password", "Enter the password:", show="*", parent = self.root)
+            password = simpledialog.askstring("SSH Password", "Enter the password:", show="*", parent = self.root)"""
+
+            ip = simpledialog.askstring("SSH IP", "Enter the remote IP address:", parent = self)
+            username = simpledialog.askstring("SSH Username", "Enter the username:", parent = self)
+            password = simpledialog.askstring("SSH Password", "Enter the password:", show="*", parent = self)
 
             if not all([ip, username, password]):
                 self.status_label.config(text="SSH details incomplete.", fg="red")
@@ -334,7 +549,9 @@ class VideoPlayer:
                 content = file.read()
 
             # Create a new popup window
-            log_window = tk.Toplevel(self.root)
+            """log_window = tk.Toplevel(self.root)"""
+            log_window = tk.Toplevel(self)
+
             log_window.title("System Logs")
             log_window.geometry("600x400")
 
@@ -385,7 +602,8 @@ class VideoPlayer:
             print("Camera released")
     
         cv2.destroyAllWindows()  # Close OpenCV windows
-        self.root.destroy()  # Close Tkinter window
+        """self.root.destroy()  # Close Tkinter window"""
+        self.master.destroy()  # Close Tkinter window
 
     def update_status(self, message, remaining_time = "N/A", color="black"):
         # self.status_label.config(text=f"{message}\nRemaining time: {remaining_time}", fg=color)
@@ -443,6 +661,15 @@ class VideoPlayer:
         self.play_button.config(state=tk.DISABLED)
 
         self.is_realtime = False
+        self.shrunk_mask = None
+        self.dummy_mask = None
+
+        self.footage_mask_label.destroy()  # Optional: if you know it's still around
+        """self.footage_mask_label = tk.Label(self.root)"""
+        self.footage_mask_label = tk.Label(self)
+
+        self.footage_mask_label.grid(row=2, column=3, padx=0, pady=0)
+
 
 
     def choose_file(self):
@@ -587,19 +814,19 @@ class VideoPlayer:
                 '''
 
 
-
-                # Update the progress bar and check if the video is playing in real time
-                current_time = self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
-                
-                total_time = self.cap.get(cv2.CAP_PROP_FRAME_COUNT) / self.cap.get(cv2.CAP_PROP_FPS)
+                if not self.is_realtime:
+                    # Update the progress bar and check if the video is playing in real time
+                    current_time = self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
                     
-                self.progress_bar['value'] = (current_time / total_time) * 100
-                self.progress_label.config(text=f"{int(current_time//60)}:{int(current_time%60):02d} / {int(total_time//60)}:{int(total_time%60):02d}")
+                    total_time = self.cap.get(cv2.CAP_PROP_FRAME_COUNT) / self.cap.get(cv2.CAP_PROP_FPS)
+                        
+                    self.progress_bar['value'] = (current_time / total_time) * 100
+                    self.progress_label.config(text=f"{int(current_time//60)}:{int(current_time%60):02d} / {int(total_time//60)}:{int(total_time%60):02d}")
 
-                # Check if video is playing in real time and calculate time discrepancy
-                elapsed_real_time = time.time() - self.start_time
-                speed_ratio = current_time / elapsed_real_time
-                percentage = speed_ratio * 100
+                    # Check if video is playing in real time and calculate time discrepancy
+                    elapsed_real_time = time.time() - self.start_time
+                    speed_ratio = current_time / elapsed_real_time
+                    percentage = speed_ratio * 100
                 if self.is_realtime:
                     self.update_status(f"Video playing in real time.")
                 else:
@@ -609,7 +836,9 @@ class VideoPlayer:
                         remaining_real_time = (total_time - current_time) / speed_ratio
                         self.update_status(f"Video not playing in real time. ({percentage:.2f}%)", f"{int(remaining_real_time//60)}:{int(remaining_real_time%60):02d}", "red")
 
-                self.root.after(5, self.process_video_frame)
+                """self.root.after(5, self.process_video_frame)"""
+                self.after(5, self.process_video_frame)
+
                 #self.root.after(16, self.process_video_frame)
 
             else:
@@ -623,7 +852,7 @@ class VideoPlayer:
                     file_name = self.file_path # File path included
                     # file_name = os.path.basename(self.file_path)  # Extract just the file name
                     self.update_log(f"Video file '{file_name}' is done being processed...", "blue")  # Add log update
-                    self.save_log_to_file()
+                    self.save_log_to_file(self.error_log_path)
 
 
 
@@ -787,9 +1016,11 @@ class VideoPlayer:
         # Update the threshold value in the error detection script here
 
 def main():
-    root = tk.Tk()
+    """root = tk.Tk()
     player = VideoPlayer(root)
-    root.mainloop()
+    root.mainloop()"""
+    app = App()
+    app.mainloop()
 
 if __name__ == "__main__":
     main()
