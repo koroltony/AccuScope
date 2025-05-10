@@ -465,6 +465,9 @@ class VideoPlayer(tk.Frame):
 
         self.toggle_camera_button = tk.Button(self, text="Toggle Camera Source", command=self.toggle_camera)
         self.toggle_camera_button.grid(row=4, column=0, padx=5, pady=5)
+        
+        self.end_real_time_button = tk.Button(self, text="Finish Real Time", command=self.stop_realtime)
+        self.end_real_time_button.grid(row=4, column=1, padx=5, pady=5)
 
         # Status label
         self.status_label = tk.Label(self, text="No video detected.\nRemaining time: N/A", fg="red")
@@ -485,10 +488,11 @@ class VideoPlayer(tk.Frame):
         self.case_number, self.timestamp = self.create_new_case_folder()  # Initialize the new case number and timestamp
         self.case_folder = os.path.join("Cases", f"Case_{self.case_number}_{self.timestamp}")
         os.makedirs(self.case_folder, exist_ok=True)  # Create the case folder
-
         # Initialize log files
         self.error_log_path = os.path.join(self.case_folder, "error_log.txt")
         self.system_log_path = os.path.join(self.case_folder, "system_log.txt")
+        self.create_log_files()
+
 
         self.master.protocol("WM_DELETE_WINDOW", self.on_close)
 
@@ -595,7 +599,6 @@ class VideoPlayer(tk.Frame):
             else:
                 break
 
-
     def on_close(self):
         if self.cap is not None and self.cap.isOpened():  # Check if video capture exists
             self.cap.release()  # Release the camera or video
@@ -669,8 +672,51 @@ class VideoPlayer(tk.Frame):
         self.footage_mask_label = tk.Label(self)
 
         self.footage_mask_label.grid(row=2, column=3, padx=0, pady=0)
+        
+    def stop_realtime(self):
 
+        # Stop any playback or video capture
+        self.play_flag = False
+        if self.cap:
+            self.cap.release()
+            self.cap = None
+            
+        self.update_status("Finished playing video.", "0:00", "blue")
+        self.canvas.delete("all")
 
+        # After processing is done
+        self.update_log("Video is done being processed...")
+        self.save_log_to_file(self.error_log_path)
+
+        # Clear canvas
+        self.canvas.delete("all")
+        self.image_on_canvas = None
+
+        # Reset progress
+        self.progress_bar["value"] = 0
+        self.progress_label.config(text="0:00 / 0:00")
+
+        # Reset status
+        self.status_label.config(text="No video detected.\nRemaining time: N/A", fg="red")
+
+        # Reset file and flags
+        self.file_path = None
+        self.frozen_frame_flags = []
+        self.start_time = None
+        self.fps = 0
+
+        # Re-enable buttons if needed
+        self.play_button.config(state=tk.DISABLED)
+
+        self.is_realtime = False
+        self.shrunk_mask = None
+        self.dummy_mask = None
+
+        self.footage_mask_label.destroy()  # Optional: if you know it's still around
+        """self.footage_mask_label = tk.Label(self.root)"""
+        self.footage_mask_label = tk.Label(self)
+
+        self.footage_mask_label.grid(row=2, column=3, padx=0, pady=0)
 
     def choose_file(self):
         file_path = filedialog.askopenfilename()
@@ -840,7 +886,7 @@ class VideoPlayer(tk.Frame):
                 self.after(5, self.process_video_frame)
 
                 #self.root.after(16, self.process_video_frame)
-
+            
             else:
                 #print("DEBUG: no frame captured")
                 self.cap.release()
