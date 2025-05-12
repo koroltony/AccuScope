@@ -86,7 +86,7 @@ def find_peaks_numpy_illustrative(signal, threshold=0.2, laplacian_threshold=0.0
 def repeated_region_numpy_illustrative(frame):
     img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     center = img.shape[1] // 2
-    region_avg = np.mean(img[20:400, center - 5:center + 5], axis=1)
+    region_avg = np.mean(img[20:400, center - 40:center + 40], axis=1)
     norm = (region_avg - np.mean(region_avg)) / (np.std(region_avg) or 1)
     autocorr = np.correlate(norm, norm, mode='full')[len(norm)-1:]
     #test_max = autocorr.copy()
@@ -96,16 +96,17 @@ def repeated_region_numpy_illustrative(frame):
     # Get peak indices
     peak_indices = find_peaks_numpy_illustrative(autocorr_log, window=20)
     
-    if len(peak_indices) >= 5:
+    if (len(peak_indices) >= 5) and (np.std(autocorr_log[peak_indices[1:]])>0.05):
         #print(np.min(test_max))
         plt.figure()
         plt.plot(autocorr_log, label='log(autocorr)')
         plt.plot(peak_indices, autocorr_log[peak_indices], 'ro', label='Peaks')
+        # print(np.std(autocorr_log[peak_indices[1:]]))
         plt.title("Autocorrelation Peaks")
         plt.legend()
         plt.show()
 
-    return len(peak_indices) >= 5
+    return (len(peak_indices) >= 5) and (np.std(autocorr_log[peak_indices[1:]])>0.05)
 
 # ---------------------- Numpy Implementation -----------------------------------
 
@@ -123,27 +124,31 @@ def find_peaks_numpy(signal, threshold=0.2, laplacian_threshold=0.075, window=5,
     max_filtered = maximum_filter1d(signal, size=2 * peak_distance + 1, mode='constant')
     true_peak_mask = (signal == max_filtered) & mask
     
-    peak_len = len(np.nonzero(true_peak_mask)[0])
+    peak_indices = np.nonzero(true_peak_mask)[0]
             
-    return peak_len
+    return np.array(peak_indices)
 
 def repeated_region_numpy(frame):
     img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     center = img.shape[1] // 2
-    region_avg = np.mean(img[20:400, center - 5:center + 5], axis=1)
+    region_avg = np.mean(img[20:400, center - 40:center + 40], axis=1)
     
     # Ignore super dark frames where normalization might amplify noise
     
-    if np.mean(region_avg) >= 1:
+    if np.mean(region_avg) >= 3:
         norm = (region_avg - np.mean(region_avg)) / (np.std(region_avg) or 1)
         autocorr = np.correlate(norm, norm, mode='full')[len(norm)-1:]
         autocorr /= np.max(autocorr) or 1
         autocorr_log = np.log1p(np.abs(autocorr))
     
         # Get peak indices
-        peak_len = find_peaks_numpy(autocorr_log, window=20)
+        peak_indices = find_peaks_numpy(autocorr_log, window=20)
         
-        return peak_len >= 5
+        # Check total intensity to see if the frame is just a black screen
+        # if (len(peak_indices) >= 5) and (np.std(autocorr_log[peak_indices[1:]])>0.05):
+        #     print(np.mean(region_avg))
+        
+        return (len(peak_indices) >= 5) and (np.std(autocorr_log[peak_indices[1:]])>0.05)
 
 # -------------------- Scipy Implementation -----------------------------------
 

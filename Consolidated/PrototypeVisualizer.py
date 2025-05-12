@@ -11,14 +11,16 @@ from source_update.highlights import checkHighlightsFrame
 from source_update.lagff15 import detect_frozen_frame
 from source_update.auto_mask import create_mask
 from source_update.panoto70fcn import checkPanoEdge
-from source_update.panoto70fcn import repeated_region_numpy_illustrative as repeated_region
+from source_update.panoto70fcn import repeated_region_numpy as repeated_region
 from source_update.menuDetect import hasMenu
 
 # Get video path:
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 #video_path = "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated/source_update/stitched_test_video.mp4"
-video_path = "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo232.mp4"
+
+# 51, (75), 80, 82, 88, 89, 90, 91, 114, 115, 116, 137, 134, 144, 147, 193, 194, 195, 197, 198, (232), (233), (234)
+video_path = "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo147.mp4"
 
 
 codeStart = time.time()
