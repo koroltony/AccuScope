@@ -55,12 +55,12 @@ import cv2
 
 import numpy as np
 import time
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from PIL import Image, ImageTk
 from tkinter import simpledialog, filedialog, ttk
-from tkinter import Tk, Canvas, Text, Button, Label, Entry, StringVar, END
-from skimage import measure
-from skimage.draw import disk
+# from tkinter import Tk, Canvas, Text, Button, Label, Entry, StringVar, END
+# from skimage import measure
+# from skimage.draw import disk
 
 def cv2_to_tk(img, scale=0.6):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -492,8 +492,10 @@ class VideoPlayer(tk.Frame):
         self.error_log_path = os.path.join(self.case_folder, "error_log.txt")
         self.system_log_path = os.path.join(self.case_folder, "system_log.txt")
         self.raw_video_path = os.path.join(self.case_folder, 'raw_video.mp4')
+        self.error_video_path = os.path.join(self.case_folder, 'error_video.mp4')
         self.create_log_files()
         self.saved_vid = cv2.VideoWriter(self.raw_video_path, cv2.VideoWriter_fourcc(*'mp4v'), 60, (640,480))
+        self.error_vid = cv2.VideoWriter(self.error_video_path, cv2.VideoWriter_fourcc(*'mp4v'), 60, (2*640,480))
 
 
         self.master.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -607,6 +609,7 @@ class VideoPlayer(tk.Frame):
             print("Camera released")
             
             self.saved_vid.release()
+            self.error_vid.release()
             if not self.is_realtime:
                 os.remove(self.raw_video_path)
     
@@ -651,6 +654,11 @@ class VideoPlayer(tk.Frame):
             self.saved_vid.release()
             os.remove(self.raw_video_path)
             self.saved_vid = cv2.VideoWriter(self.raw_video_path, cv2.VideoWriter_fourcc(*'mp4v'), 60, (640,480))
+            
+        if self.error_vid:    
+            self.error_vid.release()
+            os.remove(self.error_video_path)
+            self.error_vid = cv2.VideoWriter(self.error_video_path, cv2.VideoWriter_fourcc(*'mp4v'), 60, (2*640,480))
 
         # Clear canvas
         self.canvas.delete("all")
@@ -693,6 +701,7 @@ class VideoPlayer(tk.Frame):
             self.cap.release()
             self.cap = None
             self.saved_vid.release()
+            self.error_vid.release()
             if not self.is_realtime:
                 os.remove(self.raw_video_path)
             
@@ -788,7 +797,7 @@ class VideoPlayer(tk.Frame):
             _ = self.scripts["green"].checkGreenFrame_numba(initial_frame)
             _ = self.scripts["magenta"].checkMagentaFrame_numba(initial_frame)
 
-            file_name = os.path.basename(self.file_path)  # Extract just the file name
+            # file_name = os.path.basename(self.file_path)  # Extract just the file name
             self.update_status("Video is currently playing.", "Calculating...", "green")
             self.update_log(f"Video file '{self.file_path}' is now being processed...", "blue")  # Add log update with the whole path
             #self.update_log(f"Video file '{file_name}' is now being processed...", "blue")  # Add log update with only the file name
@@ -891,7 +900,7 @@ class VideoPlayer(tk.Frame):
                     speed_ratio = current_time / elapsed_real_time
                     percentage = speed_ratio * 100
                 if self.is_realtime:
-                    self.update_status(f"Video playing in real time.")
+                    self.update_status("Video playing in real time.")
                 else:
                     if abs(elapsed_real_time - current_time) < 1:
                         self.update_status(f"Video playing in real time. ({percentage:.2f}%)", "N/A", "green")
@@ -907,6 +916,7 @@ class VideoPlayer(tk.Frame):
             else:
                 #print("DEBUG: no frame captured")
                 self.saved_vid.release()
+                self.error_vid.release()
                 if not self.is_realtime:
                     os.remove(self.raw_video_path)
                 self.cap.release()
@@ -926,6 +936,13 @@ class VideoPlayer(tk.Frame):
 
     def detect_and_display_errors(self, frame):
         
+        black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        error_frame = black_frame.copy()
+        error_text = "No Error"
+        
+        error_duration = 2*self.fps
+        error_counter = 0
+        
         '''
         Masking the entire footage is unnecessary, we only mask for dropout
         
@@ -935,7 +952,7 @@ class VideoPlayer(tk.Frame):
         else:
             mask_applied = False
         '''
-        mask_applied = False
+        # mask_applied = False
 
         with self.lock:
             error_text = "No Error"
@@ -945,10 +962,6 @@ class VideoPlayer(tk.Frame):
 
         # Use dynamically loaded modules
         if "green" in self.scripts and self.scripts["green"]:
-            
-            #if self.scripts["green"].checkGreenFrame_numba(frame) == 1:
-            #    error_text = "Green Screen Error" if self.is_realtime else f"Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
-            #    self.update_log(error_text, "red")
 
             if self.scripts["green"].checkGreenFrame_numba(frame) == 1:
                 if self.is_realtime:
@@ -956,6 +969,8 @@ class VideoPlayer(tk.Frame):
                 else:
                     error_text = f"Full Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 self.update_log(error_text, "red")
+                error_frame = frame.copy()
+                error_counter = error_duration
 
 
             if self.scripts["green"].checkGreenFrame_numba(frame) == 2:
@@ -964,6 +979,8 @@ class VideoPlayer(tk.Frame):
                 else:
                     error_text = f"Corner Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 self.update_log(error_text, "red")
+                error_frame = frame.copy()
+                error_counter = error_duration
 
         if "magenta" in self.scripts and self.scripts["magenta"]:
             if self.scripts["magenta"].checkMagentaFrame_numba(frame):
@@ -972,6 +989,8 @@ class VideoPlayer(tk.Frame):
                 else:
                     error_text = f"Magenta Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 self.update_log(error_text, "red")
+                error_frame = frame.copy()
+                error_counter = error_duration
 
         if "black" in self.scripts and self.scripts["black"]:
             if getattr(self,'masking',None) and self.masking.raw_mode:
@@ -981,6 +1000,8 @@ class VideoPlayer(tk.Frame):
                     else:
                         error_text = f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                     self.update_log(error_text, "red")
+                    error_frame = frame.copy()
+                    error_counter = error_duration
             else:
                 if self.scripts["black"].checkBlackFrame_numba(frame, self.current_mask):
                     if self.is_realtime:
@@ -988,6 +1009,8 @@ class VideoPlayer(tk.Frame):
                     else:
                         error_text = f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                     self.update_log(error_text, "red")
+                    error_frame = frame.copy()
+                    error_counter = error_duration
 
         #if "highlights" in self.scripts and self.scripts["highlights"]:
         #    if self.scripts["highlights"].checkHighlightsFrame(frame):
@@ -1020,8 +1043,8 @@ class VideoPlayer(tk.Frame):
                     else:
                         error_text = f"Frozen Frame Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                     self.update_log(error_text, "red")
-                    #error_frame = frame.copy()
-                    #error_counter = error_duration
+                    error_frame = frame.copy()
+                    error_counter = error_duration
 
                 frozen_frame_buffer.pop(0)
         # '''
@@ -1043,6 +1066,36 @@ class VideoPlayer(tk.Frame):
                 #error_frame = frame.copy()
                 #error_counter = error_duration
                 self.update_log(error_text, "red")
+                error_frame = frame.copy()
+                error_counter = error_duration
+
+                
+        # Calculate where to put the text
+        frame_height, frame_width = frame.shape[:2]
+        top_left = (int(0.02 * frame_width), int(0.05 * frame_height))
+        center_pos = (int(0.4 * frame_width), int(0.5 * frame_height))
+        error_pos = (int(0.02 * frame_width), int(0.15 * frame_height))
+
+        # Create the error frames to be shown side by side with video
+        if error_counter > 0:
+            error_display = error_frame.copy()
+            cv2.putText(error_display, 'Error Stream', top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+            cv2.putText(error_display, error_text, error_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
+            error_counter -= 1
+        else:
+            error_display = black_frame.copy()
+            cv2.putText(error_display, 'Error Stream', top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+            cv2.putText(error_display, 'No Error', center_pos, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+
+        error_display_frame = frame.copy()
+
+        cv2.putText(error_display_frame, 'Input Video', top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+
+        # Combine the frames side by side
+        combined_frame = np.hstack((error_display_frame, error_display))
+
+        # Write to Output Video
+        self.error_vid.write(combined_frame)
 
         
 
