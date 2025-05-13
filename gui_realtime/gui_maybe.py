@@ -499,6 +499,11 @@ class VideoPlayer(tk.Frame):
 
 
         self.master.protocol("WM_DELETE_WINDOW", self.on_close)
+        
+        self.black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        self.error_frame = self.black_frame.copy()
+        self.error_counter = 0
+        self.error_text = "No Error"
 
     def create_new_case_folder(self):
             # Check if the "cases" folder exists, create if not
@@ -936,13 +941,6 @@ class VideoPlayer(tk.Frame):
 
     def detect_and_display_errors(self, frame):
         
-        black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-        error_frame = black_frame.copy()
-        error_text = "No Error"
-        
-        error_duration = 2*self.fps
-        error_counter = 0
-        
         '''
         Masking the entire footage is unnecessary, we only mask for dropout
         
@@ -955,7 +953,7 @@ class VideoPlayer(tk.Frame):
         # mask_applied = False
 
         with self.lock:
-            error_text = "No Error"
+            error_duration = 2*self.fps
             currentFrame = self.cap.get(cv2.CAP_PROP_POS_FRAMES)
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # e.g., 2025-05-05 14:32:21.123
@@ -965,52 +963,52 @@ class VideoPlayer(tk.Frame):
 
             if self.scripts["green"].checkGreenFrame_numba(frame) == 1:
                 if self.is_realtime:
-                    error_text = f"Full Green Screen Error at {timestamp}"
+                    self.error_text = f"Full Green Screen Error at {timestamp}"
                 else:
-                    error_text = f"Full Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
-                self.update_log(error_text, "red")
-                error_frame = frame.copy()
-                error_counter = error_duration
+                    self.error_text = f"Full Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                self.update_log(self.error_text, "red")
+                self.error_frame = frame.copy()
+                self.error_counter = error_duration
 
 
             if self.scripts["green"].checkGreenFrame_numba(frame) == 2:
                 if self.is_realtime:
-                    error_text = f"Corner Green Screen Error at {timestamp}"
+                    self.error_text = f"Corner Green Screen Error at {timestamp}"
                 else:
-                    error_text = f"Corner Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
-                self.update_log(error_text, "red")
-                error_frame = frame.copy()
-                error_counter = error_duration
+                    self.error_text = f"Corner Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                self.update_log(self.error_text, "red")
+                self.error_frame = frame.copy()
+                self.error_counter = error_duration
 
         if "magenta" in self.scripts and self.scripts["magenta"]:
             if self.scripts["magenta"].checkMagentaFrame_numba(frame):
                 if self.is_realtime:
-                    error_text = f"Magenta Screen Error at {timestamp}"
+                    self.error_text = f"Magenta Screen Error at {timestamp}"
                 else:
-                    error_text = f"Magenta Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
-                self.update_log(error_text, "red")
-                error_frame = frame.copy()
-                error_counter = error_duration
+                    self.error_text = f"Magenta Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                self.update_log(self.error_text, "red")
+                self.error_frame = frame.copy()
+                self.error_counter = error_duration
 
         if "black" in self.scripts and self.scripts["black"]:
             if getattr(self,'masking',None) and self.masking.raw_mode:
                 if self.scripts["black"].checkDropoutNoMask(frame):
                     if self.is_realtime:
-                        error_text = f"Dropout Error at {timestamp}"
+                        self.error_text = f"Dropout Error at {timestamp}"
                     else:
-                        error_text = f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
-                    self.update_log(error_text, "red")
-                    error_frame = frame.copy()
-                    error_counter = error_duration
+                        self.error_text = f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    self.update_log(self.error_text, "red")
+                    self.error_frame = frame.copy()
+                    self.error_counter = error_duration
             else:
                 if self.scripts["black"].checkBlackFrame_numba(frame, self.current_mask):
                     if self.is_realtime:
-                        error_text = f"Dropout Error at {timestamp}"
+                        self.error_text = f"Dropout Error at {timestamp}"
                     else:
-                        error_text = f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
-                    self.update_log(error_text, "red")
-                    error_frame = frame.copy()
-                    error_counter = error_duration
+                        self.error_text = f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    self.update_log(self.error_text, "red")
+                    self.error_frame = frame.copy()
+                    self.error_counter = error_duration
 
         #if "highlights" in self.scripts and self.scripts["highlights"]:
         #    if self.scripts["highlights"].checkHighlightsFrame(frame):
@@ -1039,12 +1037,12 @@ class VideoPlayer(tk.Frame):
                     # print(f"Frozen Frame Error Detected at {round((currentFrame/self.fps), 4):.2f}s (More than 4 in the last {window_size} frames)")
                     # error_text = f"Frozen Frame Error at {round((currentFrame/self.fps), 4):.2f}s and frame: {currentFrame}"
                     if self.is_realtime:
-                        error_text = f"Frozen Frame at {timestamp}"
+                        self.error_text = f"Frozen Frame at {timestamp}"
                     else:
-                        error_text = f"Frozen Frame Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
-                    self.update_log(error_text, "red")
-                    error_frame = frame.copy()
-                    error_counter = error_duration
+                        self.error_text = f"Frozen Frame Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    self.update_log(self.error_text, "red")
+                    self.error_frame = frame.copy()
+                    self.error_counter = error_duration
 
                 frozen_frame_buffer.pop(0)
         # '''
@@ -1059,15 +1057,15 @@ class VideoPlayer(tk.Frame):
             if self.scripts["pano"].repeated_region_numpy(frame):
                 #error_text = f"Pano-70 (repeated region) Error at {round((currentFrame/self.fps), 4)}s and frame: {currentFrame}"
                 if self.is_realtime:
-                    error_text = f"Pano-70 Error at {timestamp}"
+                    self.error_text = f"Pano-70 Error at {timestamp}"
                 else:
-                    error_text = f"Pano-70 Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    self.error_text = f"Pano-70 Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
                 # print(f"Pano-70 (repeated region) Error at {round((currentFrame/self.fps), 4)}s and frame: {currentFrame}")
                 #error_frame = frame.copy()
                 #error_counter = error_duration
-                self.update_log(error_text, "red")
-                error_frame = frame.copy()
-                error_counter = error_duration
+                self.update_log(self.error_text, "red")
+                self.error_frame = frame.copy()
+                self.error_counter = error_duration
 
                 
         # Calculate where to put the text
@@ -1077,13 +1075,13 @@ class VideoPlayer(tk.Frame):
         error_pos = (int(0.02 * frame_width), int(0.15 * frame_height))
 
         # Create the error frames to be shown side by side with video
-        if error_counter > 0:
-            error_display = error_frame.copy()
+        if self.error_counter > 0:
+            error_display = self.error_frame.copy()
             cv2.putText(error_display, 'Error Stream', top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-            cv2.putText(error_display, error_text, error_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
-            error_counter -= 1
+            cv2.putText(error_display, self.error_text, error_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
+            self.error_counter -= 1
         else:
-            error_display = black_frame.copy()
+            error_display = self.black_frame.copy()
             cv2.putText(error_display, 'Error Stream', top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
             cv2.putText(error_display, 'No Error', center_pos, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
 
