@@ -491,7 +491,9 @@ class VideoPlayer(tk.Frame):
         # Initialize log files
         self.error_log_path = os.path.join(self.case_folder, "error_log.txt")
         self.system_log_path = os.path.join(self.case_folder, "system_log.txt")
+        self.raw_video_path = os.path.join(self.case_folder, 'raw_video.mp4')
         self.create_log_files()
+        self.saved_vid = cv2.VideoWriter(self.raw_video_path, cv2.VideoWriter_fourcc(*'mp4v'), 60, (640,480))
 
 
         self.master.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -603,6 +605,10 @@ class VideoPlayer(tk.Frame):
         if self.cap is not None and self.cap.isOpened():  # Check if video capture exists
             self.cap.release()  # Release the camera or video
             print("Camera released")
+            
+            self.saved_vid.release()
+            if not self.is_realtime:
+                os.remove(self.raw_video_path)
     
         cv2.destroyAllWindows()  # Close OpenCV windows
         """self.root.destroy()  # Close Tkinter window"""
@@ -639,6 +645,11 @@ class VideoPlayer(tk.Frame):
         if self.cap:
             self.cap.release()
             self.cap = None
+            
+            
+        if self.saved_vid:    
+            self.saved_vid.release()
+            os.remove(self.raw_video_path)
 
         # Clear canvas
         self.canvas.delete("all")
@@ -680,6 +691,9 @@ class VideoPlayer(tk.Frame):
         if self.cap:
             self.cap.release()
             self.cap = None
+            self.saved_vid.release()
+            if not self.is_realtime:
+                os.remove(self.raw_video_path)
             
         self.update_status("Finished playing video.", "0:00", "blue")
         self.canvas.delete("all")
@@ -836,6 +850,8 @@ class VideoPlayer(tk.Frame):
             # print(f" frame retrieved: {ret}")
             
             if ret:
+                if self.is_realtime:
+                    self.saved_vid.write(frame)
                 #print("DEBUG: frame read successfully")
                 frame = cv2.resize(frame, (640, 480), interpolation = cv2.INTER_LINEAR)
                 if hasattr(self, 'masking') and self.masking.is_running():
@@ -889,6 +905,9 @@ class VideoPlayer(tk.Frame):
             
             else:
                 #print("DEBUG: no frame captured")
+                self.saved_vid.release()
+                if not self.is_realtime:
+                    os.remove(self.raw_video_path)
                 self.cap.release()
                 self.update_status("Finished playing video.", "0:00", "blue")
                 self.canvas.delete("all")

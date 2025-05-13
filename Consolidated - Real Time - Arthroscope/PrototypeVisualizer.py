@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from source.greenVectorizedSolution import checkGreenFrame_numba as checkGreenFrame
 from source.magentaScreen import checkMagentaFrame_numba as checkMagentaFrame
 from source.dropoutScreen import checkBlackFrame_numba as checkBlackFrame
-from source.highlights import checkHighlightsFrameq
+from source.highlights import checkHighlightsFrame
 from source.lagff15 import detect_frozen_frame
 from source.auto_mask import create_mask
 from source.panoto70fcn import checkPanoEdge
