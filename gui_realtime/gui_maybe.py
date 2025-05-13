@@ -650,6 +650,7 @@ class VideoPlayer(tk.Frame):
         if self.saved_vid:    
             self.saved_vid.release()
             os.remove(self.raw_video_path)
+            self.saved_vid = cv2.VideoWriter(self.raw_video_path, cv2.VideoWriter_fourcc(*'mp4v'), 60, (640,480))
 
         # Clear canvas
         self.canvas.delete("all")
