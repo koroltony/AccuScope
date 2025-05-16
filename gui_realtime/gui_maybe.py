@@ -16,11 +16,6 @@ from tkinter import simpledialog, filedialog, ttk
 # from tkinter import Tk, Canvas, Text, Button, Label, Entry, StringVar, END
 # from skimage import measure
 # from skimage.draw import disk
-
-# Add the error detection folder to sys.path by going back to the parent directory 
-#parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..')) 
-#sys.path.append(parent_dir)
-
 import importlib
 
 # Function to load the correct error detection scripts dynamically
@@ -59,6 +54,14 @@ currentFrame = 1
 window_size = 10
 frozen_frame_buffer = []
 
+
+# RealTimeMasking provides an interactive real-time mask editing interface 
+# for live video streams. It allows users to:
+# - Preview and adjust a binary mask on live frames
+# - Use keyboard controls to shrink ('s') or grow ('g') the mask
+# - Toggle raw video mode ('r') and confirm the final mask ('k')
+# - Overlay mask edges in red for visual feedback
+# - Return the final adjusted mask after confirmation
 
 class RealTimeMasking:
     def __init__(self, video_source, scripts):
@@ -207,6 +210,11 @@ class RealTimeMasking:
         
         return self.shrunk_mask
 
+# App is the main Tkinter application window that manages two primary views:
+# - StartScreen: the initial UI where the user selects or configures options
+# - VideoPlayer: the main interface for video playback and analysis
+# It initializes both views, places them in the same layout grid, and uses 
+# `tkraise()` to switch between them.
 
 class App(tk.Tk):
     def __init__(self):
@@ -234,6 +242,10 @@ class App(tk.Tk):
 
     def show_main(self):
         self.video_player.tkraise()
+
+# StartScreen is the initial frame shown to the user when the app launches.
+# It displays a welcome message, logo, and buttons to either start the analysis 
+# or open a help window. The layout is centered and styled for a clean UI.
 
 class StartScreen(tk.Frame):
     def __init__(self, master):
@@ -302,6 +314,14 @@ class StartScreen(tk.Frame):
     """)
         help_text.config(state=tk.DISABLED)
         help_text.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
+
+
+# VideoPlayer is a Tkinter-based GUI class for loading, playing, and analyzing 
+# both real-time and file-based videos. It supports error detection using custom 
+# scripts, real-time system logging via SSH, dynamic masking, and automatic case 
+# folder creation for saving logs and video outputs. The class also provides 
+# functions for resetting the UI, toggling cameras, managing logs, and handling 
+# resource cleanup.
 
 class VideoPlayer(tk.Frame):
     def __init__(self, master):
