@@ -3,22 +3,23 @@ import os
 import tkinter as tk
 import keyboard
 import subprocess
+import signal
+import json
 from datetime import datetime
+import threading
+import cv2
+import numpy as np
+import time
+# import matplotlib.pyplot as plt
+from PIL import Image, ImageTk
+from tkinter import simpledialog, filedialog, ttk
+# from tkinter import Tk, Canvas, Text, Button, Label, Entry, StringVar, END
+# from skimage import measure
+# from skimage.draw import disk
 
 # Add the error detection folder to sys.path by going back to the parent directory 
 #parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..')) 
 #sys.path.append(parent_dir)
-
-'''
-check everything is up to date
-save videos? log?
-txt file with file name + error timestamps and classification
-
-
-
-'''
-
-
 
 import importlib
 
@@ -49,34 +50,10 @@ def load_error_detection_scripts(is_realtime=False):
 
     return loaded_scripts
 
-
-import threading
-import cv2
-
-import numpy as np
-import time
-# import matplotlib.pyplot as plt
-from PIL import Image, ImageTk
-from tkinter import simpledialog, filedialog, ttk
-# from tkinter import Tk, Canvas, Text, Button, Label, Entry, StringVar, END
-# from skimage import measure
-# from skimage.draw import disk
-
 def cv2_to_tk(img, scale=0.6):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = cv2.resize(img, (0, 0), fx=scale, fy=scale)
     return ImageTk.PhotoImage(Image.fromarray(img))
-
-# Import the error detection scripts
-'''
-from greenScripts.greenVectorizedSolution import checkGreenFrame
-from greenScripts.magentaScreen import checkMagentaFrame
-from greenScripts.dropoutScreen import checkBlackFrame
-from Highlights.highlights import checkHighlightsFrame
-from Frozen.lagff15 import detect_frozen_frame
-from HelperScripts.auto_mask import create_mask
-from panoto70.panoto70fcn import checkPano
-'''
 
 currentFrame = 1
 window_size = 10
@@ -326,91 +303,6 @@ class StartScreen(tk.Frame):
         help_text.config(state=tk.DISABLED)
         help_text.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
 
-
-'''
-class VideoPlayer:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Video Player")
-        self.root.geometry("1000x660")
-        self.source = 0
-
-        self.lock = threading.Lock()
-        self.is_realtime = False  # Flag to track real-time mode
-        self.scripts = load_error_detection_scripts(self.is_realtime)
-
-        # Create and place the canvas for video playback
-        self.canvas = tk.Canvas(root, bg = "black" ,width=640, height=480)
-        self.canvas.grid(row=0, column=0, columnspan=3, padx=5, pady=5)
-
-        # Create and place the error log
-        #self.error_log = tk.Text(root, height=30, width=40)
-        self.error_log = tk.Text(root, height = 20)
-        self.error_log.grid(row=0, column=3, sticky = 'ne', padx=5, pady=5)
-
-        root.grid_columnconfigure(3, weight=2)
-
-        # Create and place the video progress bar
-        self.progress_label = tk.Label(root, text="0:00 / 0:00")
-        self.progress_label.grid(row=1, column=0, columnspan=3, padx=5, pady=5)
-        self.progress_bar = ttk.Progressbar(root, orient=tk.HORIZONTAL, length=640, mode='determinate')
-        self.progress_bar.grid(row=1, column=0, columnspan=3, padx=5, pady=5)
-
-        # Create and place the Choose File button
-        self.choose_button = tk.Button(root, text="Choose File", command=self.choose_file)
-        self.choose_button.grid(row=2, column=0, padx=5, pady=5)
-
-        # Create and place the Real-Time button
-        self.realtime_button = tk.Button(root, text="Real-Time", command=self.realtime_video)
-        self.realtime_button.grid(row=3, column=0, padx=5, pady=5)
-
-        # Create and place the Play button
-        self.play_button = tk.Button(root, text="Play", command=self.play_video)
-        self.play_button.grid(row=2, column=1, padx=5, pady=5)
-        self.play_button.config(state=tk.DISABLED)
-
-        # Reset button
-        self.reset_button = tk.Button(self.root, text="Reset", command=self.reset_gui)
-        self.reset_button.grid(row=3, column=1, padx=5, pady=5)
-
-        self.autossh_button = tk.Button(root, text="Run AutoSSH", command=self.run_autossh)
-        self.autossh_button.grid(row=3, column=2, padx=5, pady=5)
-
-        self.open_logs_button = tk.Button(root, text="Open System Logs", command=self.open_system_logs)
-        self.open_logs_button.grid(row=2, column=2, padx=5, pady=5)
-        
-        self.toggle_camera_button = tk.Button(root,text="Toggle Camera Source",command = self.toggle_camera)
-        self.toggle_camera_button.grid(row=4,column=0,padx=5,pady=5)
-
-
-        # Create and place the threshold controls
-        #self.threshold_label = tk.Label(root, text="Green Detection Threshold:")
-        #self.threshold_label.grid(row=2, column=2, padx=5, pady=5, sticky=tk.W)
-        #self.threshold_value = tk.StringVar(value="100")  # Default threshold value
-        #self.threshold_entry = tk.Entry(root, textvariable=self.threshold_value)
-        #self.threshold_entry.grid(row=2, column=2, padx=5, pady=5)
-        #self.update_threshold_button = tk.Button(root, text="Update Threshold", command=self.update_threshold)
-        #self.update_threshold_button.grid(row=2, column=2, padx=5, pady=5, sticky=tk.E)
-
-        # Create and place the status label
-        self.status_label = tk.Label(root, text="No video detected.\nRemaining time: N/A", fg="red")
-        self.status_label.grid(row=1, column=3, padx=5, pady=5)
-        
-        self.footage_mask_label = tk.Label(root)
-        self.footage_mask_label.grid(row=2, column=3, padx=0, pady=0)
-    
-
-        self.cap = None
-        self.image_on_canvas = None
-        self.play_flag = False
-        self.file_path = None
-        self.frozen_frame_flags = []
-        self.start_time = None
-        self.fps = 0
-
-        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
-'''
-
 class VideoPlayer(tk.Frame):
     def __init__(self, master):
         
@@ -491,6 +383,7 @@ class VideoPlayer(tk.Frame):
         # Initialize log files
         self.error_log_path = os.path.join(self.case_folder, "error_log.txt")
         self.system_log_path = os.path.join(self.case_folder, "system_log.txt")
+        self.matched_log_path = os.path.join(self.case_folder, "matched_log.txt")
         self.raw_video_path = os.path.join(self.case_folder, 'raw_video.mp4')
         self.error_video_path = os.path.join(self.case_folder, 'error_video.mp4')
         self.create_log_files()
@@ -531,6 +424,8 @@ class VideoPlayer(tk.Frame):
                 f.write(f"Error Log for case {self.case_number}\n")
             with open(self.system_log_path, 'w') as f:
                 f.write(f"System Log for case {self.case_number}\n")
+            with open(self.matched_log_path, 'w') as f:
+                f.write(f"Matched Log for case {self.case_number}\n")
 
     def run_autossh(self):
         try:
@@ -547,9 +442,10 @@ class VideoPlayer(tk.Frame):
                 return
 
             # Pass the data to autossh.py
-            subprocess.Popen(
-                [sys.executable, "autossh.py", ip, username, password],
-                shell=False
+            self.autossh_process = subprocess.Popen(
+                [sys.executable, "-W", "ignore", "autossh.py", ip, username, password, self.system_log_path],
+                shell=False,
+                start_new_session=True  # <-- This ensures proper signal handling
             )
             self.status_label.config(text="autossh.py launched with user input.", fg="green")
 
@@ -609,18 +505,68 @@ class VideoPlayer(tk.Frame):
                 break
 
     def on_close(self):
-        if self.cap is not None and self.cap.isOpened():  # Check if video capture exists
-            self.cap.release()  # Release the camera or video
-            print("Camera released")
-            
-            self.saved_vid.release()
-            self.error_vid.release()
-            if not self.is_realtime:
-                os.remove(self.raw_video_path)
-    
-        cv2.destroyAllWindows()  # Close OpenCV windows
-        """self.root.destroy()  # Close Tkinter window"""
-        self.master.destroy()  # Close Tkinter window
+        try:
+            if self.cap is not None and self.cap.isOpened():
+                self.cap.release()
+                print("Camera released")
+
+            # Release video writers if they exist
+            try:
+                self.saved_vid.release()
+                print("Saved video released")
+            except Exception as e:
+                print(f"Error releasing saved_vid: {e}")
+
+            try:
+                self.error_vid.release()
+                print("Error video released")
+            except Exception as e:
+                print(f"Error releasing error_vid: {e}")
+
+        except Exception as e:
+            print(f"Exception in cleanup: {e}")
+
+        # Terminate autossh.py process if running
+        if hasattr(self, 'autossh_process') and self.autossh_process.poll() is None:
+            try:
+                print("Terminating autossh process...")
+                self.autossh_process.send_signal(signal.CTRL_C_EVENT)
+                print("Sent CTRL_C_EVENT, waiting up to 5s for process to exit...")
+                
+                # With this:
+                for _ in range(10):
+                    if self.autossh_process.poll() is not None:
+                        print("autossh process terminated.")
+                        break
+                    time.sleep(0.5)
+                else:
+                    print("autossh process did not terminate. Killing...")
+                    self.autossh_process.kill()
+                    self.autossh_process.wait()
+                    print("autossh process killed.")
+
+                print("autossh process terminated.")
+            except subprocess.TimeoutExpired:
+                print("autossh process did not terminate in time. Killing it...")
+                self.autossh_process.kill()
+                self.autossh_process.wait()
+                print("autossh process killed.")
+            except Exception as e:
+                print(f"Error terminating autossh process: {e}")
+
+        # Close all OpenCV and GUI windows
+        try:
+            cv2.destroyAllWindows()
+            print("OpenCV windows closed")
+        except Exception as e:
+            print(f"Error closing OpenCV windows: {e}")
+
+        try:
+            self.master.destroy()
+            print("Tkinter window closed")
+        except Exception as e:
+            print(f"Error destroying Tkinter window: {e}")
+
 
     def update_status(self, message, remaining_time = "N/A", color="black"):
         # self.status_label.config(text=f"{message}\nRemaining time: {remaining_time}", fg=color)
@@ -640,14 +586,6 @@ class VideoPlayer(tk.Frame):
             file.write(self.error_log.get("1.0", tk.END))
 
     def reset_gui(self):
-        '''
-        """Reset the entire window by recreating the main window."""
-        self.root.quit()  # Close the current window
-        new_root = tk.Tk()  # Create a new Tkinter window
-        new_window = VideoPlayer(new_root)  # Reinitialize the VideoPlayer window
-        new_root.mainloop()  # Start the new event loop
-        '''
-
         # Stop any playback or video capture
         self.play_flag = False
         if self.cap:
@@ -693,7 +631,6 @@ class VideoPlayer(tk.Frame):
         self.dummy_mask = None
 
         self.footage_mask_label.destroy()  # Optional: if you know it's still around
-        """self.footage_mask_label = tk.Label(self.root)"""
         self.footage_mask_label = tk.Label(self)
 
         self.footage_mask_label.grid(row=2, column=3, padx=0, pady=0)
