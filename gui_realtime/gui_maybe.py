@@ -506,13 +506,25 @@ class VideoPlayer(tk.Frame):
     def toggle_camera(self):
         sources = [0, 1, 2]
         
+        if self.saved_vid:    
+            self.saved_vid.release()
+            os.remove(self.raw_video_path)
+            self.saved_vid = cv2.VideoWriter(self.raw_video_path, cv2.VideoWriter_fourcc(*'mp4v'), 60, (640,480))
+            
+        if self.error_vid:    
+            self.error_vid.release()
+            os.remove(self.error_video_path)
+            self.error_vid = cv2.VideoWriter(self.error_video_path, cv2.VideoWriter_fourcc(*'mp4v'), 60, (2*640,480))
+
+
         # Repeatedly try sources until one works:
             
         self.cap = cv2.VideoCapture(self.source)
         
         self.source = (self.source + 1) % len(sources)
         self.cap = cv2.VideoCapture(self.source)
-        
+    
+
         # Check the FPS to see if it is a valid source (0 is not valid)
         
         while True:

@@ -75,7 +75,7 @@ python gui_realtime/gui_maybe.py
 * **Play**: Start playback.
 * **Reset**: Stop and clear current playback.
 * **Open System Logs**: View logs downloaded from the remote system.
-* **Run SSH Task**: Launches a remote script (`autossh.py`) on a Jetson device and downloads logs.
+* **Run SSH Task**: Runs a remote monitoring script on the Jetson device via SSH and downloads system logs.
 
 ---
 

@@ -63,7 +63,7 @@ def cleanup_and_exit(signum=None, frame=None):
                 for line in f:
                     try:
                         entry = json.loads(line)
-                        entry_time = datetime.strptime(entry["time"], "%m-%d-%Y %H:%M:%S")
+                        entry_time = datetime.strptime(entry["time"], "%m-%d-%Y %H:%M:%S.%f")
                         system_data.append((entry_time, entry))
                     except:
                         continue
