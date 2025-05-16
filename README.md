@@ -103,7 +103,7 @@ MIT License. See `LICENSE` file for details.
 
 ## Contributors
 
-* Your Name — [`@yourusername`](https://github.com/yourusername)
+* Zion Chang — [`@zionucsb`](https://github.com/zionucsb)
 * Collaborators, mentors, etc.
 
 ???
