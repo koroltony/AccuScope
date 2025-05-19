@@ -498,7 +498,9 @@ class VideoPlayer(tk.Frame):
             text_widget.config(yscrollcommand=scrollbar.set)
 
         except FileNotFoundError:
-            self.status_label.config(text="system_logs.txt not found.", fg="red")
+            self.status_label.config(text="system_logs.txt not found, creating new file", fg="red")
+            open("arthrex_system_logs.txt", "w")
+            self.open_system_logs()
         except Exception as e:
             self.status_label.config(text=f"Error opening logs: {e}", fg="red")
             
