@@ -462,10 +462,11 @@ class VideoPlayer(tk.Frame):
                 return
 
             # Pass the data to autossh.py
+            autossh_path = os.path.join(os.path.dirname(__file__), "autossh.py")
             self.autossh_process = subprocess.Popen(
-                [sys.executable, "-W", "ignore", "autossh.py", ip, username, password, self.system_log_path],
+                [sys.executable, "-W", "ignore", autossh_path, ip, username, password, self.system_log_path],
                 shell=False,
-                start_new_session=True  # <-- This ensures proper signal handling
+                start_new_session=True
             )
             self.status_label.config(text="autossh.py launched with user input.", fg="green")
 
@@ -474,7 +475,8 @@ class VideoPlayer(tk.Frame):
 
     def open_system_logs(self):
         try:
-            with open("arthrex_system_logs.txt", "r") as file:
+            system_log_path = os.path.join(os.path.dirname(__file__), "arthrex_system_logs.txt")
+            with open(system_log_path, "r") as file:
                 content = file.read()
 
             # Create a new popup window
@@ -498,9 +500,7 @@ class VideoPlayer(tk.Frame):
             text_widget.config(yscrollcommand=scrollbar.set)
 
         except FileNotFoundError:
-            self.status_label.config(text="system_logs.txt not found, creating new file", fg="red")
-            open("arthrex_system_logs.txt", "w")
-            self.open_system_logs()
+            self.status_label.config(text="system_logs.txt not found.", fg="red")
         except Exception as e:
             self.status_label.config(text=f"Error opening logs: {e}", fg="red")
             
