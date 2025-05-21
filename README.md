@@ -107,6 +107,8 @@ The script will prompt for:
 * Username
 * Password
 
+The IP Address is found on the Arthrex Synergy Vision Console.
+
 And run `jtopTestScript.py` on the remote Jetson.
 
 ## Contributors
