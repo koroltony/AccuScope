@@ -23,22 +23,39 @@ A Python GUI tool for video playback with real-time and file-based error detecti
 
 2. **Create a virtual environment (optional but recommended)**:
 
+   Using Python venv.
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
+   Using Anaconda Environment for Easier Dependency Management
+   ```bash
+   conda create --name ArthrexScripts python=3.10
+   ```
+
 3. **Install required packages**:
 
+   Using Python venv
    ```bash
    pip install -r requirements.txt
+   ```
+
+   Using Anaconda Environment
+   ```bash
+   conda install conda-forge::opencv
+   conda install anaconda::numpy
+   conda install conda-forge::matplotlib
+   conda install conda-forge::pillow
+   conda install anaconda::scikit-image
+   ...
    ```
 
 ---
 
 ## Requirements
 
-* Python 3.7+
+* Python 3.10+
 
 * opencv-python — for video handling
 
@@ -90,16 +107,6 @@ The script will prompt for:
 * Password
 
 And run `jtopTestScript.py` on the remote Jetson.
-
----
-
-## License
-
-MIT License. See `LICENSE` file for details.
-
-???
-
----
 
 ## Contributors
 
