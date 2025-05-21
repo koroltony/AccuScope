@@ -104,6 +104,6 @@ MIT License. See `LICENSE` file for details.
 ## Contributors
 
 * Zion Chang — [`@zionucsb`](https://github.com/zionucsb)
-* Collaborators, mentors, etc.
+* Tony Korol - [`@TonyKorol1`](https://github.com/TonyKorol1)
 
 ???
