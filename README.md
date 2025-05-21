@@ -9,8 +9,19 @@ A Python GUI tool for video playback with real-time and file-based error detecti
 - Video file playback and real-time camera streaming
 - Pluggable error detection scripts (real-time or offline)
 - Adjustable preview mask for focusing on regions of interest
-- Remote SSH script execution and system monitoring via `jtop`
+- Remote SSH script execution and system monitoring via `jtop` and `Fabric`
 - View system logs from Jetson remotely in a GUI popup
+- Detected anomalies are saved in a system logs folder
+
+## Software Setup
+1. Python 3.10+
+2. Anaconda or other Python Environment Manager(optional)
+3. Laptop running a Python IDE (VSCode was preferred)
+
+## Hardware Setup
+1. Both the laptop and the Arthrex Synergy Vision console needs to be connected to the same wifi network.
+2. Note the IP Address in the Synergy Vision Console Splash Screen. Another way to obtain the IP address is to open the Internet settings menu on the tablet.
+3. Username and Password for Console is console-specific.
 
 ## Installation
 
@@ -53,9 +64,7 @@ A Python GUI tool for video playback with real-time and file-based error detecti
 
 ---
 
-## Requirements
-
-* Python 3.10+
+## Python Required Libraries
 
 * opencv-python — for video handling
 
@@ -99,7 +108,7 @@ Or open in preferred Python IDE.
 
 ## Remote Execution Details
 
-The `autossh.py` script runs a remote process using `Fabric`, capturing and downloading system metrics.
+The `autossh.py` script runs a remote process using `Fabric`. Autossh python code is integrated inside the GUI. The user needs to press the "Run AutoSSH" allowing the user to use Python to send Linux Commands.
 
 The script will prompt for:
 
@@ -109,7 +118,7 @@ The script will prompt for:
 
 The IP Address is found on the Arthrex Synergy Vision Console.
 
-And run `jtopTestScript.py` on the remote Jetson.
+Either run `python3 jtopTestScript.py` on the remote Jetson or use the GUI.
 
 ## Contributors
 
