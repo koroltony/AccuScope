@@ -79,11 +79,12 @@ A Python GUI tool for video playback with real-time and file-based error detecti
 
 ## Usage
 
-Run the main GUI script:
-
+Open PowerShell Window inside GUI Folder. Run:
 ```bash
-python gui_realtime/gui_maybe.py
+python gui_realtime/gui.py
 ```
+
+Or open in preferred Python IDE.
 
 ### Buttons Overview
 
