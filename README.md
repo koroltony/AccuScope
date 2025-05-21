@@ -105,5 +105,6 @@ MIT License. See `LICENSE` file for details.
 
 * Zion Chang — [`@zionucsb`](https://github.com/zionucsb)
 * Tony Korol - [`@TonyKorol1`](https://github.com/TonyKorol1)
-
-???
+* Will Peng — [`@willpeng945`](https://github.com/willpeng945)
+* Sidney Lu — [`@sheteneu`](https://github.com/sheteneu)
+* Jing Bian — [`@JingBian87`](https://github.com/JingBian87)
