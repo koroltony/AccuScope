@@ -11,7 +11,8 @@ from source_update.highlights import checkHighlightsFrame
 from source_update.lagff15 import detect_frozen_frame
 from source_update.auto_mask import create_mask
 from source_update.panoto70fcn import checkPanoEdge
-from source_update.panoto70fcn import repeated_region_numpy as repeated_region
+from source_update.panoto70fcn import repeated_region_numpy_illustrative as repeated_region
+from source_update.panoto70fcn import repeated_region_numpy as repeated_regioncheck
 from source_update.menuDetect import hasMenu
 
 # Get video path:
@@ -19,8 +20,8 @@ from source_update.menuDetect import hasMenu
 current_dir = os.path.dirname(os.path.abspath(__file__))
 #video_path = "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated/source_update/stitched_test_video.mp4"
 
-# 51, (75), 80, 82, 88, 89, 90, 91, 114, 115, 116, 137, 134, 144, 147, 193, 194, 195, 197, 198, (232), (233), (234)
-video_path = "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo147.mp4"
+# 51, (75), 80, 82, 88, 89, 90, 91, 114, 115, 116, 137, 134, 144, 147, 193, 194, 195, 197, 198
+video_path = "C:/Users/korol/Documents/Arthrex Code/ece188a-arthrex/Consolidated - Real Time - Arthroscope/Raw_Videos/RawVideo198.mp4"
 
 
 codeStart = time.time()
@@ -161,6 +162,9 @@ while video.isOpened():
     
     # Check pano autocorrelation
     repeated_return = repeated_region(frame)
+    repeated_check = repeated_regioncheck(frame)
+    if repeated_return != repeated_check:
+        raise Exception('Normalization does not match')
     if repeated_return == 1:
         error_text = f"Pano-70 (repeated region) Error at {time_stamp:.2f}s"
         print(f"Pano-70 (repeated region) Error at {time_stamp:.2f}s")

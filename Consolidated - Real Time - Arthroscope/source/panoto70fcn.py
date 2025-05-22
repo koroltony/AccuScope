@@ -87,26 +87,47 @@ def repeated_region_numpy_illustrative(frame):
     img = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     center = img.shape[1] // 2
     region_avg = np.mean(img[20:400, center - 40:center + 40], axis=1)
-    norm = (region_avg - np.mean(region_avg)) / (np.std(region_avg) or 1)
-    autocorr = np.correlate(norm, norm, mode='full')[len(norm)-1:]
-    #test_max = autocorr.copy()
-    autocorr /= np.max(autocorr) or 1
-    autocorr_log = np.log1p(np.abs(autocorr))
-
-    # Get peak indices
-    peak_indices = find_peaks_numpy_illustrative(autocorr_log, window=20)
     
-    if (len(peak_indices) >= 5) and (np.std(autocorr_log[peak_indices[1:]])>0.05):
-        #print(np.min(test_max))
-        plt.figure()
-        plt.plot(autocorr_log, label='log(autocorr)')
-        plt.plot(peak_indices, autocorr_log[peak_indices], 'ro', label='Peaks')
-        # print(np.std(autocorr_log[peak_indices[1:]]))
-        plt.title("Autocorrelation Peaks")
-        plt.legend()
-        plt.show()
-
-    return (len(peak_indices) >= 5) and (np.std(autocorr_log[peak_indices[1:]])>0.05)
+    if np.mean(region_avg) >= 3:
+        norm = (region_avg - np.mean(region_avg)) / (np.std(region_avg) or 1)
+        autocorr = np.correlate(norm, norm, mode='full')[len(norm)-1:]
+        #test_max = autocorr.copy()
+        autocorr_int = autocorr/(np.max(autocorr) or 1)
+        autocorr_log = np.log1p(np.clip(autocorr_int, 0, None))
+    
+        # Get peak indices
+        peak_indices = find_peaks_numpy_illustrative(autocorr_log, window=20)
+        
+        if (len(peak_indices) >= 3) and (np.std(autocorr_log[peak_indices[1:]])>0.05):
+            plt.figure()
+            plt.plot(region_avg)
+            plt.xlabel('Image Index (height-axis)')
+            plt.ylabel('Average Value')
+            plt.title('Un-Normalized Average')
+            
+            plt.figure()
+            plt.plot(norm)
+            plt.xlabel('Image Index (height-axis)')
+            plt.ylabel('Normalized Average Value')
+            plt.title('Normalized Average')
+            
+            plt.figure()
+            plt.plot(autocorr)
+            plt.xlabel('Autocorrelation "Phase Index"')
+            plt.ylabel('Magnitude')
+            plt.title('Peaks of Un-Normalized Autocorrelation')
+            
+            plt.figure()
+            plt.plot(autocorr_log)
+            plt.plot(peak_indices, autocorr_log[peak_indices], 'ro', label='Peaks')
+            plt.xlabel('Autocorrelation "Phase Index"')
+            plt.ylabel('Normalized Magnitude')
+            plt.title('Peaks of Normalized Autocorrelation')
+            
+            plt.figure()
+            plt.imshow(frame)
+    
+        return (len(peak_indices) >= 3) and (np.std(autocorr_log[peak_indices[1:]])>0.05)
 
 # ---------------------- Numpy Implementation -----------------------------------
 
@@ -139,12 +160,16 @@ def repeated_region_numpy(frame):
         norm = (region_avg - np.mean(region_avg)) / (np.std(region_avg) or 1)
         autocorr = np.correlate(norm, norm, mode='full')[len(norm)-1:]
         autocorr /= np.max(autocorr) or 1
-        autocorr_log = np.log1p(np.abs(autocorr))
+        autocorr_log = np.log1p(np.clip(autocorr, 0, None))
     
         # Get peak indices
         peak_indices = find_peaks_numpy(autocorr_log, window=20)
         
-        return (len(peak_indices) >= 5) and (np.std(autocorr_log[peak_indices[1:]])>0.05)
+        # Check total intensity to see if the frame is just a black screen
+        # if (len(peak_indices) >= 5) and (np.std(autocorr_log[peak_indices[1:]])>0.05):
+        #     print(np.mean(region_avg))
+        
+        return (len(peak_indices) >= 3) and (np.std(autocorr_log[peak_indices[1:]])>0.05)
 
 # -------------------- Scipy Implementation -----------------------------------
 

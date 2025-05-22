@@ -936,7 +936,7 @@ class VideoPlayer(tk.Frame):
                 if self.is_realtime:
                     self.error_text = f"Full Green Screen Error at {timestamp}"
                 else:
-                    self.error_text = f"Full Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    self.error_text = f"Full Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
                 self.update_log(self.error_text, "red")
                 self.error_frame = frame.copy()
                 self.error_counter = error_duration
@@ -946,7 +946,7 @@ class VideoPlayer(tk.Frame):
                 if self.is_realtime:
                     self.error_text = f"Corner Green Screen Error at {timestamp}"
                 else:
-                    self.error_text = f"Corner Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    self.error_text = f"Corner Green Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
                 self.update_log(self.error_text, "red")
                 self.error_frame = frame.copy()
                 self.error_counter = error_duration
@@ -956,7 +956,7 @@ class VideoPlayer(tk.Frame):
                 if self.is_realtime:
                     self.error_text = f"Magenta Screen Error at {timestamp}"
                 else:
-                    self.error_text = f"Magenta Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    self.error_text = f"Magenta Screen Error Detected at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
                 self.update_log(self.error_text, "red")
                 self.error_frame = frame.copy()
                 self.error_counter = error_duration
@@ -967,7 +967,7 @@ class VideoPlayer(tk.Frame):
                     if self.is_realtime:
                         self.error_text = f"Dropout Error at {timestamp}"
                     else:
-                        self.error_text = f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                        self.error_text = f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
                     self.update_log(self.error_text, "red")
                     self.error_frame = frame.copy()
                     self.error_counter = error_duration
@@ -976,7 +976,7 @@ class VideoPlayer(tk.Frame):
                     if self.is_realtime:
                         self.error_text = f"Dropout Error at {timestamp}"
                     else:
-                        self.error_text = f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                        self.error_text = f"Dropout Error Detected at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
                     self.update_log(self.error_text, "red")
                     self.error_frame = frame.copy()
                     self.error_counter = error_duration
@@ -1010,7 +1010,7 @@ class VideoPlayer(tk.Frame):
                     if self.is_realtime:
                         self.error_text = f"Frozen Frame at {timestamp}"
                     else:
-                        self.error_text = f"Frozen Frame Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                        self.error_text = f"Frozen Frame Detected at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
                     self.update_log(self.error_text, "red")
                     self.error_frame = frame.copy()
                     self.error_counter = error_duration
@@ -1030,7 +1030,7 @@ class VideoPlayer(tk.Frame):
                 if self.is_realtime:
                     self.error_text = f"Pano-70 Error at {timestamp}"
                 else:
-                    self.error_text = f"Pano-70 Error Detected at {round((currentFrame/self.fps), 4)} seconds and frame: {currentFrame}"
+                    self.error_text = f"Pano-70 Error Detected at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
                 # print(f"Pano-70 (repeated region) Error at {round((currentFrame/self.fps), 4)}s and frame: {currentFrame}")
                 #error_frame = frame.copy()
                 #error_counter = error_duration
