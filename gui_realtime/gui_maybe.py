@@ -1049,7 +1049,11 @@ class VideoPlayer(tk.Frame):
         if self.error_counter > 0:
             error_display = self.error_frame.copy()
             cv2.putText(error_display, 'Error Stream', top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-            cv2.putText(error_display, self.error_text, error_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
+            lines = self.error_text.split('\n')
+            line_spacing = 30  
+            for i, line in enumerate(lines):
+                position = (error_pos[0], error_pos[1] + i * line_spacing)
+                cv2.putText(error_display, line, position, cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
             self.error_counter -= 1
         else:
             error_display = self.black_frame.copy()
