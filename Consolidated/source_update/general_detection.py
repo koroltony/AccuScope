@@ -54,9 +54,8 @@ def general_detection(frame1, frame2,
         mask = np.zeros_like(edge_img)
         for cnt in contours:
             x, y, w, h = cv2.boundingRect(cnt)
-            aspect_ratio = max(w / (h + 1e-6), h / (w + 1e-6))  # avoid divide by zero
             length = cv2.arcLength(cnt, closed=False)
-            if (length >= min_len) and (w >= min_width or h >= min_width or aspect_ratio > 4.0):
+            if (length >= min_len) and (w >= min_width or h >= min_width):
                 cv2.drawContours(mask, [cnt], -1, 255, thickness=cv2.FILLED)
         return mask
 
