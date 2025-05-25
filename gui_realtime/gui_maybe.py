@@ -18,9 +18,9 @@ from tkinter import simpledialog, filedialog, ttk
 # from skimage.draw import disk
 import importlib
 
-# Function to load the correct error detection scripts dynamically
-def load_error_detection_scripts(is_realtime=False):
-    base_folder = "Consolidated - Real time - Arthroscope/source" if is_realtime else "Consolidated/source_update"
+# Function to load the correct error detection scripts from a fixed directory
+def load_error_detection_scripts():
+    base_folder = "Consolidated/source_update"
     folder_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", base_folder))
 
     if folder_path not in sys.path:
@@ -34,6 +34,7 @@ def load_error_detection_scripts(is_realtime=False):
         "frozen": "lagff15",
         "mask": "auto_mask",
         "pano": "panoto70fcn",
+        "general": "general_detection"
     }
 
     loaded_scripts = {}
@@ -339,7 +340,7 @@ class VideoPlayer(tk.Frame):
 
         self.lock = threading.Lock()
         self.is_realtime = False
-        self.scripts = load_error_detection_scripts(self.is_realtime)
+        self.scripts = load_error_detection_scripts()
 
         # Video playback canvas
         self.canvas = tk.Canvas(self, bg="black", width=640, height=480)
@@ -377,6 +378,20 @@ class VideoPlayer(tk.Frame):
 
         self.toggle_camera_button = tk.Button(self, text="Toggle Camera Source", command=self.toggle_camera)
         self.toggle_camera_button.grid(row=4, column=0, padx=5, pady=5)
+        
+        # Sensitivity control
+        self.sensitivity = tk.DoubleVar(value=0.2)
+        self.sensitivity_slider = tk.Scale(
+            self,
+            from_=0.0,
+            to=0.5,
+            resolution=0.05,
+            orient="horizontal",
+            label="Error Discovery Sensitivity",
+            variable=self.sensitivity,
+            length = 200
+        )
+        self.sensitivity_slider.grid(row=5, column=0, columnspan=3, padx=5, pady=10)
         
         self.end_real_time_button = tk.Button(self, text="Finish Real Time", command=self.stop_realtime)
         self.end_real_time_button.grid(row=4, column=1, padx=5, pady=5)
@@ -744,7 +759,7 @@ class VideoPlayer(tk.Frame):
     def play_video(self):
         if self.file_path and not self.is_realtime:
             self.is_realtime = False  # Set mode to file processing
-            self.scripts = load_error_detection_scripts(self.is_realtime)
+            self.scripts = load_error_detection_scripts()
 
             # Release previous capture if it exists
             if self.cap is not None and self.cap.isOpened():
@@ -811,7 +826,7 @@ class VideoPlayer(tk.Frame):
             self.update_status("Error with webcam.", "N/A", "red")
             return
         
-        self.scripts = load_error_detection_scripts(self.is_realtime)
+        self.scripts = load_error_detection_scripts()
         self.masking = RealTimeMasking(self.cap, self.scripts)  # Instantiate once
 
         
@@ -980,6 +995,7 @@ class VideoPlayer(tk.Frame):
                     self.update_log(self.error_text, "red")
                     self.error_frame = frame.copy()
                     self.error_counter = error_duration
+                    
 
         #if "highlights" in self.scripts and self.scripts["highlights"]:
         #    if self.scripts["highlights"].checkHighlightsFrame(frame):
@@ -1016,6 +1032,17 @@ class VideoPlayer(tk.Frame):
                     self.error_counter = error_duration
 
                 frozen_frame_buffer.pop(0)
+                
+                
+        if ("general" in self.scripts and self.scripts["general"]):
+            if hasattr(self,"prev_frame") and self.scripts["general"].general_detection(self.prev_frame,frame,sensitivity = 0.5-float(self.sensitivity.get())):
+                if self.is_realtime:
+                    self.error_text = f"High Probability of Error at {timestamp}"
+                else:
+                    self.error_text = f"High Probability of Error at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
+                self.update_log(self.error_text, "red")
+                self.error_frame = frame.copy()
+                self.error_counter = error_duration
         # '''
         #if "mask" in self.scripts and "pano" in self.scripts and self.scripts["mask"] and self.scripts["pano"]:
         #    lmask, smask = self.scripts["mask"].create_mask(frame)

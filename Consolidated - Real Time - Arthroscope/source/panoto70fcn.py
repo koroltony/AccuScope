@@ -63,7 +63,7 @@ def repeated_region(frame):
 
 # ----------------------------------------------------------------------------------------
 
-def find_peaks_numpy_illustrative(signal, threshold=0.2, laplacian_threshold=0.075, window=5, peak_distance = 5):
+def find_peaks_numpy_illustrative(signal, threshold=0.2, laplacian_threshold=0.15, window=5, peak_distance = 5):
     size = 2 * window + 1
     kernel = np.zeros(size)
     kernel[window] = 1
@@ -131,7 +131,7 @@ def repeated_region_numpy_illustrative(frame):
 
 # ---------------------- Numpy Implementation -----------------------------------
 
-def find_peaks_numpy(signal, threshold=0.2, laplacian_threshold=0.075, window=5, peak_distance = 5):
+def find_peaks_numpy(signal, threshold=0.2, laplacian_threshold=0.15, window=5, peak_distance = 5):
     size = 2 * window + 1
     kernel = np.zeros(size)
     kernel[window] = 1
