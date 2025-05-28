@@ -34,7 +34,8 @@ def load_error_detection_scripts():
         "frozen": "lagff15",
         "mask": "auto_mask",
         "pano": "panoto70fcn",
-        "general": "general_detection"
+        "general": "general_detection",
+        "general2": "general_test"
     }
 
     loaded_scripts = {}
@@ -944,6 +945,8 @@ class VideoPlayer(tk.Frame):
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # e.g., 2025-05-05 14:32:21.123
 
+        error_detected = False  # Initially no error
+
         # Use dynamically loaded modules
         if "green" in self.scripts and self.scripts["green"]:
 
@@ -955,6 +958,7 @@ class VideoPlayer(tk.Frame):
                 self.update_log(self.error_text, "red")
                 self.error_frame = frame.copy()
                 self.error_counter = error_duration
+                error_detected = True
 
 
             if self.scripts["green"].checkGreenFrame_numba(frame) == 2:
@@ -965,6 +969,7 @@ class VideoPlayer(tk.Frame):
                 self.update_log(self.error_text, "red")
                 self.error_frame = frame.copy()
                 self.error_counter = error_duration
+                error_detected = True
 
         if "magenta" in self.scripts and self.scripts["magenta"]:
             if self.scripts["magenta"].checkMagentaFrame_numba(frame):
@@ -975,6 +980,7 @@ class VideoPlayer(tk.Frame):
                 self.update_log(self.error_text, "red")
                 self.error_frame = frame.copy()
                 self.error_counter = error_duration
+                error_detected = True
 
         if "black" in self.scripts and self.scripts["black"]:
             if getattr(self,'masking',None) and self.masking.raw_mode:
@@ -986,6 +992,7 @@ class VideoPlayer(tk.Frame):
                     self.update_log(self.error_text, "red")
                     self.error_frame = frame.copy()
                     self.error_counter = error_duration
+                    error_detected = True
             else:
                 if self.scripts["black"].checkBlackFrame_numba(frame, self.current_mask):
                     if self.is_realtime:
@@ -995,6 +1002,7 @@ class VideoPlayer(tk.Frame):
                     self.update_log(self.error_text, "red")
                     self.error_frame = frame.copy()
                     self.error_counter = error_duration
+                    error_detected = True
                     
 
         #if "highlights" in self.scripts and self.scripts["highlights"]:
@@ -1030,25 +1038,9 @@ class VideoPlayer(tk.Frame):
                     self.update_log(self.error_text, "red")
                     self.error_frame = frame.copy()
                     self.error_counter = error_duration
+                    error_detected = True
 
                 frozen_frame_buffer.pop(0)
-                
-                
-        if ("general" in self.scripts and self.scripts["general"]):
-            if hasattr(self,"prev_frame") and self.scripts["general"].general_detection(self.prev_frame,frame,sensitivity = 0.5-float(self.sensitivity.get())):
-                if self.is_realtime:
-                    self.error_text = f"High Probability of Error at {timestamp}"
-                else:
-                    self.error_text = f"High Probability of Error at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
-                self.update_log(self.error_text, "red")
-                self.error_frame = frame.copy()
-                self.error_counter = error_duration
-        # '''
-        #if "mask" in self.scripts and "pano" in self.scripts and self.scripts["mask"] and self.scripts["pano"]:
-        #    lmask, smask = self.scripts["mask"].create_mask(frame)
-        #    if self.scripts["pano"].checkPano(frame, smask, lmask):
-        #        error_text = f"Pano-70 Error Detected at {round((currentFrame/self.fps), 4)} seconds"
-        #        self.update_log(error_text, "red")
         
         # Check pano autocorrelation
         if "pano" in self.scripts and self.scripts["pano"]:
@@ -1064,6 +1056,40 @@ class VideoPlayer(tk.Frame):
                 self.update_log(self.error_text, "red")
                 self.error_frame = frame.copy()
                 self.error_counter = error_duration
+                error_detected = True
+
+        if not error_detected:
+            if ("general" in self.scripts and self.scripts["general"]):
+                if hasattr(self,"prev_frame") and self.scripts["general"].general_detection(self.prev_frame,frame,sensitivity = 0.5-float(self.sensitivity.get())):
+                    if self.is_realtime:
+                        self.error_text = f"High Probability of Error at {timestamp}"
+                    else:
+                        self.error_text = f"High Probability of Error at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
+                    self.update_log(self.error_text, "red")
+                    self.error_frame = frame.copy()
+                    self.error_counter = error_duration
+
+            if "general2" in self.scripts and self.scripts["general2"]:
+                if hasattr(self, "prev_frame") and self.scripts["general2"].detect_anomalies(self.prev_frame, frame):
+                
+                    if self.is_realtime:
+                        self.error_text = f"Line Anomaly at {timestamp}"
+                    else:
+                        self.error_text = f"Line Anomaly Detected at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
+                    self.update_log(self.error_text, "red")
+                    self.error_frame = frame.copy()
+                    self.error_counter = error_duration
+
+                
+
+        # '''
+        #if "mask" in self.scripts and "pano" in self.scripts and self.scripts["mask"] and self.scripts["pano"]:
+        #    lmask, smask = self.scripts["mask"].create_mask(frame)
+        #    if self.scripts["pano"].checkPano(frame, smask, lmask):
+        #        error_text = f"Pano-70 Error Detected at {round((currentFrame/self.fps), 4)} seconds"
+        #        self.update_log(error_text, "red")
+        
+        
 
                 
         # Calculate where to put the text
