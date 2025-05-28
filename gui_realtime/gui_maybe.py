@@ -1100,7 +1100,7 @@ class VideoPlayer(tk.Frame):
                 error_detected = True
 
         if not error_detected:
-            if self.processed_frame_count > 10:
+            if self.processed_frame_count > 10:  
                 if ("general" in self.scripts and self.scripts["general"]):
                     if hasattr(self,"prev_frame") and self.scripts["general"].general_detection(self.prev_frame,frame,sensitivity = 0.5-float(self.sensitivity.get())):
                         if self.is_realtime:
