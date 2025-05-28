@@ -332,6 +332,8 @@ class VideoPlayer(tk.Frame):
         #self.configure(bg="white")
         self.source = 0
 
+        self.processed_frame_count = 0
+
 
         self.canvas = tk.Canvas(self, bg="black")
         self.canvas.grid(row=0, column=0, columnspan=3, padx=5, pady=5)
@@ -451,6 +453,12 @@ class VideoPlayer(tk.Frame):
         self.error_counter = 0
         self.error_text = "No Error"
 
+    # Function to set counter to reject errors discovered within the first 10 frames
+    # of starting processing
+
+    def reset_frame_processing_state(self):
+        self.processed_frame_count = 0
+
     def create_new_case_folder(self):
             # Check if the "cases" folder exists, create if not
             if not os.path.exists("Cases"):
@@ -539,6 +547,18 @@ class VideoPlayer(tk.Frame):
             
         
     def toggle_camera(self):
+
+        # Clear canvas
+        self.canvas.delete("all")
+        self.image_on_canvas = None
+
+        # Reset error log
+        self.error_log.delete(1.0, tk.END)
+
+        self.reset_frame_processing_state()
+
+        self.error_frame = self.black_frame
+
         sources = [0, 1, 2]
         
         if self.saved_vid:    
@@ -821,6 +841,8 @@ class VideoPlayer(tk.Frame):
     def realtime_video(self):
         # self.root.update()
         #print("DEBUG: switching to real time mode")
+        self.reset_frame_processing_state()
+        print('reset')
         self.file_path = None
         self.play_flag = True
         self.is_realtime = True
@@ -873,6 +895,8 @@ class VideoPlayer(tk.Frame):
                     self.saved_vid.write(frame)
                 #print("DEBUG: frame read successfully")
                 frame = cv2.resize(frame, (640, 480), interpolation = cv2.INTER_LINEAR)
+                if self.processed_frame_count < 11:
+                    self.processed_frame_count += 1
                 if hasattr(self, 'masking') and self.masking.is_running():
                     self.current_mask = self.masking.update(frame, self.footage_mask_label)
                 self.detect_and_display_errors(frame)
@@ -1076,26 +1100,27 @@ class VideoPlayer(tk.Frame):
                 error_detected = True
 
         if not error_detected:
-            if ("general" in self.scripts and self.scripts["general"]):
-                if hasattr(self,"prev_frame") and self.scripts["general"].general_detection(self.prev_frame,frame,sensitivity = 0.5-float(self.sensitivity.get())):
-                    if self.is_realtime:
-                        self.error_text = f"High Probability of Error at {timestamp}"
-                    else:
-                        self.error_text = f"High Probability of Error at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
-                    self.update_log(self.error_text, "red")
-                    self.error_frame = frame.copy()
-                    self.error_counter = error_duration
+            if self.processed_frame_count > 10:
+                if ("general" in self.scripts and self.scripts["general"]):
+                    if hasattr(self,"prev_frame") and self.scripts["general"].general_detection(self.prev_frame,frame,sensitivity = 0.5-float(self.sensitivity.get())):
+                        if self.is_realtime:
+                            self.error_text = f"High Probability of Error at {timestamp}"
+                        else:
+                            self.error_text = f"High Probability of Error at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
+                        self.update_log(self.error_text, "red")
+                        self.error_frame = frame.copy()
+                        self.error_counter = error_duration
 
-            if "general2" in self.scripts and self.scripts["general2"]:
-                if hasattr(self, "prev_frame") and self.scripts["general2"].detect_anomalies(self.prev_frame, frame):
-                
-                    if self.is_realtime:
-                        self.error_text = f"Line Anomaly at {timestamp}"
-                    else:
-                        self.error_text = f"Line Anomaly Detected at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
-                    self.update_log(self.error_text, "red")
-                    self.error_frame = frame.copy()
-                    self.error_counter = error_duration
+                if "general2" in self.scripts and self.scripts["general2"]:
+                    if hasattr(self, "prev_frame") and self.scripts["general2"].detect_anomalies(self.prev_frame, frame):
+                    
+                        if self.is_realtime:
+                            self.error_text = f"Probable Line Anomaly at {timestamp}"
+                        else:
+                            self.error_text = f"Probable Line Anomaly Detected at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
+                        self.update_log(self.error_text, "red")
+                        self.error_frame = frame.copy()
+                        self.error_counter = error_duration
 
                 
 
@@ -1144,7 +1169,7 @@ class VideoPlayer(tk.Frame):
 
 
         # Update previous frame for frozen frame detection
-        self.prev_frame = frame
+        self.prev_frame = frame.copy()
 
         # Display error frame in the canvas
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
