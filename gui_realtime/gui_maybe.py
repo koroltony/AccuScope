@@ -47,7 +47,7 @@ def load_error_detection_scripts():
 
     return loaded_scripts
 
-def cv2_to_tk(img, scale=0.6):
+def cv2_to_tk(img, scale=0.5):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = cv2.resize(img, (0, 0), fx=scale, fy=scale)
     return ImageTk.PhotoImage(Image.fromarray(img))
@@ -358,32 +358,44 @@ class VideoPlayer(tk.Frame):
         self.progress_bar = ttk.Progressbar(self, orient=tk.HORIZONTAL, length=640, mode='determinate')
         self.progress_bar.grid(row=1, column=0, columnspan=3, padx=5, pady=5)
 
+
+        # Frame for buttons
+        self.button_frame = tk.Frame(self)
+        self.button_frame.grid(row=2, column=0, sticky="n")
+
         # Buttons
-        self.choose_button = tk.Button(self, text="Choose File", command=self.choose_file)
+        #self.choose_button = tk.Button(self, text="Choose File", command=self.choose_file)
+        self.choose_button = tk.Button(self.button_frame, text="Choose File", command=self.choose_file)
         self.choose_button.grid(row=2, column=0, padx=5, pady=5)
 
-        self.realtime_button = tk.Button(self, text="Real-Time", command=self.realtime_video)
+        #self.realtime_button = tk.Button(self, text="Real-Time", command=self.realtime_video)
+        self.realtime_button = tk.Button(self.button_frame, text="Real-Time", command=self.realtime_video)
         self.realtime_button.grid(row=3, column=0, padx=5, pady=5)
 
-        self.play_button = tk.Button(self, text="Play", command=self.play_video, state=tk.DISABLED)
+        #self.play_button = tk.Button(self, text="Play", command=self.play_video, state=tk.DISABLED)
+        self.play_button = tk.Button(self.button_frame, text="Play", command=self.play_video, state=tk.DISABLED)
         self.play_button.grid(row=2, column=1, padx=5, pady=5)
 
-        self.reset_button = tk.Button(self, text="Reset", command=self.reset_gui)
+        #self.reset_button = tk.Button(self, text="Reset", command=self.reset_gui)
+        self.reset_button = tk.Button(self.button_frame, text="Reset", command=self.reset_gui)
         self.reset_button.grid(row=3, column=1, padx=5, pady=5)
 
-        self.autossh_button = tk.Button(self, text="Run AutoSSH", command=self.run_autossh)
+        #self.autossh_button = tk.Button(self, text="Run AutoSSH", command=self.run_autossh)
+        self.autossh_button = tk.Button(self.button_frame, text="Run AutoSSH", command=self.run_autossh)
         self.autossh_button.grid(row=3, column=2, padx=5, pady=5)
 
-        self.open_logs_button = tk.Button(self, text="Open System Logs", command=self.open_system_logs)
+        #self.open_logs_button = tk.Button(self, text="Open System Logs", command=self.open_system_logs)
+        self.open_logs_button = tk.Button(self.button_frame, text="Open System Logs", command=self.open_system_logs)
         self.open_logs_button.grid(row=2, column=2, padx=5, pady=5)
 
-        self.toggle_camera_button = tk.Button(self, text="Toggle Camera Source", command=self.toggle_camera)
+        #self.toggle_camera_button = tk.Button(self, text="Toggle Camera Source", command=self.toggle_camera)
+        self.toggle_camera_button = tk.Button(self.button_frame, text="Toggle Camera Source", command=self.toggle_camera)
         self.toggle_camera_button.grid(row=4, column=0, padx=5, pady=5)
         
         # Sensitivity control
         self.sensitivity = tk.DoubleVar(value=0.2)
         self.sensitivity_slider = tk.Scale(
-            self,
+            self.button_frame,
             from_=0.0,
             to=0.5,
             resolution=0.05,
@@ -394,15 +406,20 @@ class VideoPlayer(tk.Frame):
         )
         self.sensitivity_slider.grid(row=5, column=0, columnspan=3, padx=5, pady=10)
         
-        self.end_real_time_button = tk.Button(self, text="Finish Real Time", command=self.stop_realtime)
+        self.end_real_time_button = tk.Button(self.button_frame, text="Finish Real Time", command=self.stop_realtime)
         self.end_real_time_button.grid(row=4, column=1, padx=5, pady=5)
 
         # Status label
         self.status_label = tk.Label(self, text="No video detected.\nRemaining time: N/A", fg="red")
         self.status_label.grid(row=1, column=3, padx=5, pady=5)
 
-        self.footage_mask_label = tk.Label(self)
-        self.footage_mask_label.grid(row=2, column=3, padx=0, pady=0)
+        # Frame for the image label
+        self.image_frame = tk.Frame(self)
+        self.image_frame.grid(row=2, column=3, sticky="s")
+
+        self.footage_mask_label = tk.Label(self.image_frame)
+        self.footage_mask_label.pack()
+        #self.footage_mask_label.grid(row=2, column=3, sticky="nsew", padx=0, pady=0)
 
         # Internal state
         self.cap = None
