@@ -401,7 +401,7 @@ class VideoPlayer(tk.Frame):
         self.sensitivity_slider = tk.Scale(
             self.button_frame,
             from_=0,
-            to=0.2,
+            to=0.5,
             resolution=0.01,
             orient="horizontal",
             label="Error Discovery Sensitivity",
