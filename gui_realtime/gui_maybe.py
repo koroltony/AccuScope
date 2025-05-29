@@ -332,6 +332,8 @@ class VideoPlayer(tk.Frame):
         #self.configure(bg="white")
         self.source = 0
 
+        self.framecount = 0
+
         self.processed_frame_count = 0
 
 
@@ -395,12 +397,12 @@ class VideoPlayer(tk.Frame):
         self.toggle_camera_button.grid(row=4, column=0, padx=5, pady=5)
         
         # Sensitivity control
-        self.sensitivity = tk.DoubleVar(value=0.2)
+        self.sensitivity = tk.DoubleVar(value=0.05)
         self.sensitivity_slider = tk.Scale(
             self.button_frame,
-            from_=0.0,
-            to=0.5,
-            resolution=0.05,
+            from_=0,
+            to=0.2,
+            resolution=0.01,
             orient="horizontal",
             label="Error Discovery Sensitivity",
             variable=self.sensitivity,
@@ -825,6 +827,7 @@ class VideoPlayer(tk.Frame):
             _ = self.scripts["black"].checkBlackFrame_numba(initial_frame,lmask)
             _ = self.scripts["green"].checkGreenFrame_numba(initial_frame)
             _ = self.scripts["magenta"].checkMagentaFrame_numba(initial_frame)
+            _ = self.scripts["general"].general_detection(initial_frame,initial_frame)
 
             # file_name = os.path.basename(self.file_path)  # Extract just the file name
             self.update_status("Video is currently playing.", "Calculating...", "green")
@@ -983,6 +986,10 @@ class VideoPlayer(tk.Frame):
         with self.lock:
             error_duration = 2*self.fps
             currentFrame = self.cap.get(cv2.CAP_PROP_POS_FRAMES)
+            if self.framecount <= 4:
+                self.framecount += 1
+            else:
+                self.framecount = 0
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # e.g., 2025-05-05 14:32:21.123
 
@@ -1111,16 +1118,16 @@ class VideoPlayer(tk.Frame):
                         self.error_frame = frame.copy()
                         self.error_counter = error_duration
 
-                if "general2" in self.scripts and self.scripts["general2"]:
-                    if hasattr(self, "prev_frame") and self.scripts["general2"].detect_anomalies(self.prev_frame, frame):
+                # if "general2" in self.scripts and self.scripts["general2"]:
+                #     if hasattr(self, "prev_frame") and self.scripts["general2"].detect_anomalies(self.prev_frame, frame):
                     
-                        if self.is_realtime:
-                            self.error_text = f"Probable Line Anomaly at {timestamp}"
-                        else:
-                            self.error_text = f"Probable Line Anomaly Detected at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
-                        self.update_log(self.error_text, "red")
-                        self.error_frame = frame.copy()
-                        self.error_counter = error_duration
+                #         if self.is_realtime:
+                #             self.error_text = f"Probable Line Anomaly at {timestamp}"
+                #         else:
+                #             self.error_text = f"Probable Line Anomaly Detected at {round((currentFrame/self.fps), 4)} seconds\nand frame: {currentFrame}"
+                #         self.update_log(self.error_text, "red")
+                #         self.error_frame = frame.copy()
+                #         self.error_counter = error_duration
 
                 
 
@@ -1170,32 +1177,35 @@ class VideoPlayer(tk.Frame):
 
         # Update previous frame for frozen frame detection
         self.prev_frame = frame.copy()
-
-        # Display error frame in the canvas
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        # Resize frame to desired dimensions (width = 5/3 * height)
-        frame = cv2.resize(frame, (640, 384))
-        # Convert frame to PIL image
-        img = Image.fromarray(frame)
-        img_tk = ImageTk.PhotoImage(image=img)
         
-        # Calculate the position to center the image on the canvas
-        canvas_width = self.canvas.winfo_width()
-        canvas_height = self.canvas.winfo_height()
-        img_width = img_tk.width()
-        img_height = img_tk.height()
+        if self.framecount == 0:
+            # Display error frame in the canvas
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # Resize frame to desired dimensions (width = 5/3 * height)
+            frame = cv2.resize(frame, (640, 384))
+            # Convert frame to PIL image
+            img = Image.fromarray(frame)
+            img_tk = ImageTk.PhotoImage(image=img)
+            
+            # Calculate the position to center the image on the canvas
+            canvas_width = self.canvas.winfo_width()
+            canvas_height = self.canvas.winfo_height()
+            img_width = img_tk.width()
+            img_height = img_tk.height()
 
-        x = (canvas_width - img_width) // 2
-        y = (canvas_height - img_height) // 2
+            x = (canvas_width - img_width) // 2
+            y = (canvas_height - img_height) // 2
 
-        # Display the image on the canvas
-        if self.image_on_canvas is None:
-            self.image_on_canvas = self.canvas.create_image(x, y, anchor=tk.NW, image=img_tk)
+            # Display the image on the canvas
+            if self.image_on_canvas is None:
+                self.image_on_canvas = self.canvas.create_image(x, y, anchor=tk.NW, image=img_tk)
+            else:
+                self.canvas.itemconfig(self.image_on_canvas, image=img_tk)
+                self.canvas.coords(self.image_on_canvas, x, y)
+
+            self.current_image = img_tk  # Store reference to avoid garbage collection
         else:
-            self.canvas.itemconfig(self.image_on_canvas, image=img_tk)
-            self.canvas.coords(self.image_on_canvas, x, y)
-
-        self.current_image = img_tk  # Store reference to avoid garbage collection
+            self.image_on_canvas = None
 
     def update_threshold(self):
         threshold = self.threshold_value.get()

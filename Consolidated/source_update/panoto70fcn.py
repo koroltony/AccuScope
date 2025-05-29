@@ -104,18 +104,21 @@ def repeated_region_numpy_illustrative(frame):
             plt.xlabel('Image Index (height-axis)')
             plt.ylabel('Average Value')
             plt.title('Un-Normalized Average')
+            plt.show()
             
             plt.figure()
             plt.plot(norm)
             plt.xlabel('Image Index (height-axis)')
             plt.ylabel('Normalized Average Value')
             plt.title('Normalized Average')
+            plt.show()
             
             plt.figure()
             plt.plot(autocorr)
             plt.xlabel('Autocorrelation "Phase Index"')
             plt.ylabel('Magnitude')
             plt.title('Peaks of Un-Normalized Autocorrelation')
+            plt.show()
             
             plt.figure()
             plt.plot(autocorr_log)
@@ -123,9 +126,11 @@ def repeated_region_numpy_illustrative(frame):
             plt.xlabel('Autocorrelation "Phase Index"')
             plt.ylabel('Normalized Magnitude')
             plt.title('Peaks of Normalized Autocorrelation')
+            plt.show()
             
             plt.figure()
             plt.imshow(frame)
+            plt.show()
     
         return (len(peak_indices) >= 3) and (np.std(autocorr_log[peak_indices[1:]])>0.05)
 
