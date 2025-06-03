@@ -34,6 +34,7 @@ print("Starting remote monitoring script...")
 conn.run('nohup python3 jtopTestScriptAdditions.py > system_logs.txt 2>&1 &', pty=False)
 print("Remote script running in background.")
 
+    
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Define shutdown logic

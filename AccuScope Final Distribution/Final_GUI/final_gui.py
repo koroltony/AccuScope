@@ -20,11 +20,12 @@ import importlib
 
 # Function to load the correct error detection scripts from a fixed directory
 
+
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 def load_error_detection_scripts():
     base_folder = "Final_Source"
-    folder_path = os.path.abspath(os.path.join(script_dir, "..", base_folder))
+    folder_path = os.path.join(script_dir,'..',base_folder)
 
     if folder_path not in sys.path:
         sys.path.append(folder_path)
