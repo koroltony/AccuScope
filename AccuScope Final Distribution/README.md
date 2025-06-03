@@ -34,6 +34,8 @@ A Python GUI tool for video playback with real-time and file-based error detecti
 
 2. **Create a virtual environment (optional but recommended)**:
 
+  For Windows users: Run installer.bat to automatically load all dependencies and create a venv if you don't have one already
+
    Using Python venv.
    ```bash
    python -m venv venv
@@ -45,7 +47,7 @@ A Python GUI tool for video playback with real-time and file-based error detecti
    conda create --name ArthrexScripts python=3.10
    ```
 
-3. **Install required packages**:
+4. **Install required packages**:
 
    Using Python venv
    ```bash
