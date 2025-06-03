@@ -16,7 +16,7 @@ A Python GUI tool for video playback with real-time and file-based error detecti
 ## Software Setup
 1. Python 3.10+
 2. Anaconda or other Python Environment Manager(optional)
-3. Laptop running a Python IDE (VSCode was preferred)
+3. Laptop running a Python IDE (VSCode highly preferred)
 
 ## Hardware Setup
 1. Both the laptop and the Arthrex Synergy Vision console needs to be connected to the same wifi network.
@@ -37,7 +37,7 @@ A Python GUI tool for video playback with real-time and file-based error detecti
    Using Python venv.
    ```bash
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   venv\Scripts\activate # On IOS: source venv/bin/activate  
    ```
 
    Using Anaconda Environment for Easier Dependency Management
@@ -84,13 +84,15 @@ A Python GUI tool for video playback with real-time and file-based error detecti
 
 * keyboard — keypress detection
 
+* pandas - dataset operations for logging
+
 ---
 
 ## Usage
 
 Open PowerShell Window inside GUI Folder. Run:
 ```bash
-python gui_realtime/gui.py
+python Final_GUI/final_gui.py
 ```
 
 Or open in preferred Python IDE.
