@@ -11,20 +11,21 @@ IF %ERRORLEVEL% NEQ 0 (
     exit /b
 )
 
-REM Check if venv exists
-IF NOT EXIST "venv\" (
-    echo Creating virtual environment...
-    python -m venv venv
-
-    echo Activating and installing dependencies...
-    call venv\Scripts\activate
-    pip install --upgrade pip
-    pip install -r requirements.txt
-) ELSE (
-    echo Virtual environment already exists.
-    echo Activating environment...
-    call venv\Scripts\activate
+REM Delete existing virtual environment if it exists
+IF EXIST "venv\" (
+    echo Removing existing virtual environment...
+    rmdir /s /q venv
 )
+
+REM Create a new virtual environment
+echo Creating virtual environment...
+python -m venv venv
+
+REM Activate and install dependencies
+echo Activating and installing dependencies...
+call venv\Scripts\activate
+pip install --upgrade pip
+pip install -r requirements.txt
 
 REM Run the main GUI
 echo Running the Final GUI...
