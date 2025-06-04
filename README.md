@@ -34,7 +34,7 @@ A Python GUI tool for video playback with real-time and file-based error detecti
 
    **For Windows users: Run installer.bat to automatically load all dependencies and create a venv if you don't have one already**
 
-   **Before Running installer.bat, make sure you switch to the 'AccuScope_Final_Distribution' file in your terminal using cd AccuScope_Final_Distribution**
+   **Before Running installer.bat, make sure you switch to the 'AccuScope_Final_Distribution' directory in your terminal using cd AccuScope_Final_Distribution**
 
 
 2. **Create a virtual environment (optional but recommended)**:
