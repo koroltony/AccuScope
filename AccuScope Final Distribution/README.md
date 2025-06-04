@@ -32,7 +32,7 @@ A Python GUI tool for video playback with real-time and file-based error detecti
    cd ece188a-arthrex
    ```
 
-   **For Windows users: Run installer.bat to automatically load all dependencies and create a venv if you don't have one already**
+   **For Windows users: Run installer.bat to automatically load all dependencies and create a venv if you don't have one already** Once you have done this, you should be able to run the main gui file with no issues.
 
 
 2. **Create a virtual environment (optional but recommended)**:
