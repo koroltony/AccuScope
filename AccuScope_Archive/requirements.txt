@@ -1,9 +1,0 @@
-opencv-python
-numpy
-matplotlib
-Pillow
-scikit-image
-scipy
-numba
-fabric
-keyboard
