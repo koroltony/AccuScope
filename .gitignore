@@ -1,0 +1,4 @@
+# # Ignore everything except the dist folder
+# *
+# !AccuScope_Final_Distribution/
+# !AccuScope_Final_Distribution/**
