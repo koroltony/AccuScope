@@ -32,10 +32,15 @@ A Python GUI tool for video playback with real-time and file-based error detecti
    cd ece188a-arthrex
    ```
 
+## Installer Usage for Windows Users
+
    **For Windows users: Run installer.bat to automatically load all dependencies and create a venv if you don't have one already**
+
+   When you clone the repository from this GitHub page, you will see a file called "installer.bat". This file takes care of all of the library installation via virtual environment and pip install, so that you don't have to worry about doing it in the below steps.
 
    **Before Running installer.bat, make sure you switch to the 'AccuScope_Final_Distribution' directory in your terminal using cd AccuScope_Final_Distribution**
 
+## Installation Without Using Installer File
 
 2. **Create a virtual environment (optional but recommended)**:
    
