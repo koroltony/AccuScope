@@ -40,14 +40,14 @@ A Python GUI tool for video playback with real-time and file-based error detecti
 
    **Before Running installer.bat, make sure you are in the 'AccuScope_Final_Distribution' directory in your terminal using pwd**
 
-      ```bash
+   ```bash
    pwd
    ./installer.bat
    ```
 
    **You only need to do this once. If your local directory (ece188a-arthrex/AccuScope_Final_distribution) already has a folder called "venv" with all of the necessary libraries, you can just run your script directly**
 
-```bash
+   ```bash
    ./Final_GUI/final_gui.py
    ```
 
