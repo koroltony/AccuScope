@@ -29,7 +29,7 @@ A Python GUI tool for video playback with real-time and file-based error detecti
 
    ```bash
    git clone https://github.com/.../ece188a-arthrex.git
-   cd ece188a-arthrex
+   cd ece188a-arthrex/AccuScope_Final_distribution
    ```
 
 ## Installer Usage for Windows Users
@@ -38,7 +38,18 @@ A Python GUI tool for video playback with real-time and file-based error detecti
 
    When you clone the repository from this GitHub page, you will see a file called "installer.bat". This file takes care of all of the library installation via virtual environment and pip install, so that you don't have to worry about doing it in the below steps.
 
-   **Before Running installer.bat, make sure you switch to the 'AccuScope_Final_Distribution' directory in your terminal using cd AccuScope_Final_Distribution**
+   **Before Running installer.bat, make sure you are in the 'AccuScope_Final_Distribution' directory in your terminal using pwd**
+
+      ```bash
+   pwd
+   ./installer.bat
+   ```
+
+   **You only need to do this once. If your local directory (ece188a-arthrex/AccuScope_Final_distribution) already has a folder called "venv" with all of the necessary libraries, you can just run your script directly**
+
+```bash
+   ./Final_GUI/final_gui.py
+   ```
 
 ## Installation Without Using Installer File
 
