@@ -146,7 +146,7 @@ Either run `python3 jtopTestScript.py` on the remote Jetson or use the GUI.
 ## Contributors
 
 * Zion Chang — [`@zionucsb`](https://github.com/zionucsb)
-* Tony Korol - [`@TonyKorol1`](https://github.com/TonyKorol1)
+* Tony Korol - [`@TonyKorol1`](https://github.com/TonyKorol1)[`@koroltony`](https://github.com/koroltony)
 * Will Peng — [`@willpeng945`](https://github.com/willpeng945)
 * Sidney Lu — [`@sheteneu`](https://github.com/sheteneu)
 * Jing Bian — [`@JingBian87`](https://github.com/JingBian87)
